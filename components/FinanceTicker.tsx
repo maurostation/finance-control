@@ -19,8 +19,7 @@ const TIPS_POOL = [
 ];
 
 function pick3(): string[] {
-  const shuffled = [...TIPS_POOL].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+  return [...TIPS_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
 }
 
 export default function FinanceTicker() {
@@ -43,37 +42,35 @@ export default function FinanceTicker() {
 
   if (tips.length === 0) return null;
 
-  // Duplicate so the scroll loops seamlessly (animate -50%)
+  // Duplicate content so the -50% translate creates a seamless loop
   const items = [...tips, ...tips];
 
   return (
     <div style={{
-      borderRadius: 12,
       background: 'var(--a-dim)',
-      padding: '9px 0',
+      borderBottom: '1px solid var(--a-bd)',
       overflow: 'hidden',
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
+      height: 44,
     }}>
-      {/* Left fade + icon */}
+      {/* Left pin: icon + fade */}
       <div style={{
         position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 2,
         display: 'flex', alignItems: 'center',
-        paddingLeft: 14, paddingRight: 28,
-        background: 'linear-gradient(90deg, var(--a-pale) 55%, transparent)',
+        paddingLeft: 16, paddingRight: 36,
+        background: 'linear-gradient(90deg, var(--a-pale) 60%, transparent 100%)',
         pointerEvents: 'none',
-        borderRadius: '12px 0 0 12px',
       }}>
-        <Lightbulb size={13} color="var(--a)" />
+        <Lightbulb size={14} color="var(--a)" strokeWidth={2} />
       </div>
 
       {/* Right fade */}
       <div style={{
         position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2,
-        width: 48,
-        background: 'linear-gradient(270deg, var(--a-pale) 30%, transparent)',
-        borderRadius: '0 12px 12px 0',
+        width: 56,
+        background: 'linear-gradient(270deg, var(--a-pale) 40%, transparent 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -81,29 +78,30 @@ export default function FinanceTicker() {
       <div style={{
         display: 'flex',
         whiteSpace: 'nowrap',
-        animation: 'tickerScroll 38s linear infinite',
-        paddingLeft: 48,
+        animation: 'tickerScroll 60s linear infinite',
+        paddingLeft: 52,
+        alignItems: 'center',
       }}>
         {items.map((tip, i) => (
           <span key={i} style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 10,
-            paddingRight: 72,
-            fontSize: '.78rem',
+            fontSize: '.82rem',
             color: 'var(--tx-2)',
             lineHeight: 1,
+            paddingRight: 64,
           }}>
             {tip}
-            {i < items.length - 1 && (
-              <span style={{
-                position: 'absolute',
-                marginLeft: tip.length * 7.2 + 10,
-                color: 'var(--a)',
-                opacity: .5,
-                fontSize: '.6rem',
-              }}>◆</span>
-            )}
+            {/* Separator dot */}
+            <span style={{
+              display: 'inline-block',
+              width: 5, height: 5,
+              borderRadius: '50%',
+              background: 'var(--a)',
+              opacity: 0.45,
+              marginLeft: 64,
+              flexShrink: 0,
+            }} />
           </span>
         ))}
       </div>

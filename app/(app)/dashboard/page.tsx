@@ -6,7 +6,6 @@ import { Transaction, Card, PlannedPurchase, SavingsGoal } from '@/lib/types';
 import { formatCurrency, getCurrentMonth, getCurrentMonthLabel, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
-import FinanceTicker from '@/components/FinanceTicker';
 import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { onRefresh } from '@/lib/refresh';
@@ -129,9 +128,6 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
-
-      {/* ── Financial education ticker ── */}
-      <FinanceTicker />
 
       {/* ── Main content: single column ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 20 }}>

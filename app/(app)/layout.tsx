@@ -6,6 +6,7 @@ import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import TransactionSheet from '@/components/TransactionSheet';
 import SidebarInsights from '@/components/SidebarInsights';
+import FinanceTicker from '@/components/FinanceTicker';
 import { supabase, getCards, insertTransaction } from '@/lib/supabase';
 import { Card } from '@/lib/types';
 import { broadcastRefresh } from '@/lib/refresh';
@@ -125,12 +126,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showSheet, setShowSheet] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/login'); return; }
       setUserId(user.id);
       getCards(user.id).then(({ data }) => setCards(data || []));
+      setAuthReady(true);
     });
   }, [router]);
 
@@ -201,6 +204,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     broadcastRefresh();
   }, [userId]);
 
+  // Hold render until Supabase confirms the session — prevents flash of authenticated UI
+  if (!authReady) {
+    return <div style={{ minHeight: '100svh', background: 'var(--bg)' }} />;
+  }
+
   return (
     <>
       {/* Desktop layout */}
@@ -208,8 +216,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="sidebar-wrapper">
           <Sidebar onAddClick={() => setShowSheet(true)} onSignOut={handleSignOut} pathname={pathname} userId={userId} />
         </div>
-        <main className="main-content">
-          {children}
+        <main className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Full-width sticky ticker at top of every page */}
+          <div style={{ position: 'sticky', top: 0, zIndex: 30 }}>
+            <FinanceTicker />
+          </div>
+          <div style={{ flex: 1 }}>
+            {children}
+          </div>
         </main>
       </div>
 
