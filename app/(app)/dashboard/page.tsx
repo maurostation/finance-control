@@ -169,10 +169,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Week stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* ── Stats + Cards row: mesma linha no desktop ── */}
+        <div className={cards.length > 0 ? 'week-and-cards' : 'week-stats-only'}>
           {[
-            { label: 'Esta semana', value: thisWeekExp, sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
+            { label: 'Esta semana',   value: thisWeekExp, sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
             { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
           ].map(item => (
             <div key={item.label} style={{
@@ -188,6 +188,23 @@ export default function DashboardPage() {
               </p>
             </div>
           ))}
+
+          {/* Cards column — só renderiza quando há cartões */}
+          {cards.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span className="eyebrow">Cartões</span>
+                <Link href="/cartoes" style={{ fontSize: '.75rem', color: 'var(--a)', fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  Ver todos <ArrowRight size={12} />
+                </Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {cards.slice(0, 3).map(card => (
+                  <CardWidget key={card.id} card={card} openBillAmount={cardBill(card.id)} onClick={() => {}} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Reserve */}
@@ -200,28 +217,13 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Cards */}
-        {cards.length > 0 && (
-          <section>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span className="eyebrow">Cartões</span>
-              <Link href="/cartoes" style={{ fontSize: '.75rem', color: 'var(--a)', fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
-                Ver todos <ArrowRight size={12} />
-              </Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {cards.slice(0, 3).map(card => (
-                <CardWidget key={card.id} card={card} openBillAmount={cardBill(card.id)} onClick={() => {}} />
-              ))}
-            </div>
-          </section>
-        )}
-
       </div>
 
       {/* ── Gastos fixos (recorrentes) ── */}
       {userId && (
-        <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
+        <div style={{ marginTop: 20 }}>
+          <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
+        </div>
       )}
 
       {/* ── Recent transactions (full width) ── */}

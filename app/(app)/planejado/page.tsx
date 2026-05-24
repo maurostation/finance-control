@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, getPlannedPurchases, insertPlannedPurchase, markPurchaseBought } from '@/lib/supabase';
-import { PlannedPurchase, CATEGORIES } from '@/lib/types';
+import { supabase, getPlannedPurchases, insertPlannedPurchase, markPurchaseBought, getFutureTransactions } from '@/lib/supabase';
+import { PlannedPurchase, Transaction, CATEGORIES } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { Plus, ShoppingBag, CheckCircle, X, Tag, AlertCircle } from 'lucide-react';
+import { Plus, ShoppingBag, CheckCircle, X, Tag, AlertCircle, CalendarClock, TrendingUp, TrendingDown } from 'lucide-react';
 import { PlanejadoSkeleton } from '@/components/Skeleton';
 
 export default function PlanejadoPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
+  const [futureTx, setFutureTx] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBought, setShowBought] = useState(false);
@@ -25,8 +26,12 @@ export default function PlanejadoPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
-      const { data } = await getPlannedPurchases(user.id);
-      setPurchases(data || []);
+      const [purchasesRes, futureRes] = await Promise.all([
+        getPlannedPurchases(user.id),
+        getFutureTransactions(user.id),
+      ]);
+      setPurchases(purchasesRes.data || []);
+      setFutureTx(futureRes.data || []);
       setLoading(false);
     });
   }, []);
@@ -149,6 +154,76 @@ export default function PlanejadoPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Lançamentos futuros agendados ── */}
+      {futureTx.length > 0 && (() => {
+        // Group by month
+        const grouped = futureTx.reduce<Record<string, Transaction[]>>((acc, t) => {
+          const month = t.date.slice(0, 7);
+          (acc[month] = acc[month] || []).push(t);
+          return acc;
+        }, {});
+        const months = Object.keys(grouped).sort();
+        return (
+          <div style={{ padding:'16px 32px', borderBottom:'1px solid var(--bd)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+              <CalendarClock size={13} color="var(--a)" />
+              <span className="eyebrow">Lançamentos futuros</span>
+            </div>
+            {months.map(month => {
+              const txs = grouped[month];
+              const totalOut = txs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+              const totalIn  = txs.filter(t => t.type === 'income' ).reduce((s,t) => s+t.amount, 0);
+              const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+                .format(new Date(month + '-01T00:00:00'));
+              return (
+                <div key={month} style={{ marginBottom:16 }}>
+                  {/* Month header */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                    <span style={{ fontFamily:"'Geist Mono',monospace", fontSize:'.62rem', color:'var(--tx-3)', textTransform:'uppercase', letterSpacing:'.1em' }}>
+                      {label}
+                    </span>
+                    <div style={{ display:'flex', gap:10 }}>
+                      {totalIn > 0 && <span style={{ fontSize:'.72rem', color:'var(--green)', fontWeight:600 }}>+{formatCurrency(totalIn)}</span>}
+                      {totalOut > 0 && <span style={{ fontSize:'.72rem', color:'var(--red)', fontWeight:600 }}>-{formatCurrency(totalOut)}</span>}
+                    </div>
+                  </div>
+                  {/* Tx rows */}
+                  <div style={{ background:'var(--sf)', borderRadius:12, overflow:'hidden', boxShadow:'0 1px 4px rgba(14,18,25,.05)' }}>
+                    {txs.map((tx, i) => (
+                      <div key={tx.id} style={{
+                        display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
+                        borderBottom: i < txs.length-1 ? '1px solid var(--bd)' : 'none',
+                      }}>
+                        <div style={{
+                          width:30, height:30, borderRadius:8, flexShrink:0,
+                          background: tx.type==='income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                        }}>
+                          {tx.type==='income'
+                            ? <TrendingUp size={13} color="var(--green)" />
+                            : <TrendingDown size={13} color="var(--tx-3)" />}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <p style={{ fontSize:'.84rem', fontWeight:500, color:'var(--tx)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {tx.description}
+                          </p>
+                          <p style={{ fontSize:'.68rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>
+                            {tx.date} · {tx.category}
+                          </p>
+                        </div>
+                        <span style={{ fontSize:'.88rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
+                          {tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       <div style={{ padding:'0 32px' }}>
         {/* Add form */}

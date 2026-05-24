@@ -267,6 +267,26 @@ body::before {
   }
 }
 
+/* Dashboard: week stats (2 tiles) + card column on same row on desktop */
+.week-and-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.week-stats-only {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .week-and-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.6fr;
+    gap: 12px;
+    align-items: start;
+  }
+}
+
 /* Surface card — NO border, shadow only */
 .surface {
   background: var(--sf);

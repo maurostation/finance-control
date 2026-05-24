@@ -94,3 +94,17 @@ export async function insertRecurringTemplate(data: Record<string, unknown>) {
 export async function deactivateRecurringTemplate(id: string) {
   return supabase.from('recurring_templates').update({ active: false }).eq('id', id);
 }
+
+// Transactions dated from next month onwards (for future planning view)
+export async function getFutureTransactions(userId: string) {
+  const now = new Date();
+  const firstOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    .toISOString().slice(0, 10);
+  return supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', firstOfNextMonth)
+    .order('date', { ascending: true })
+    .limit(30);
+}
