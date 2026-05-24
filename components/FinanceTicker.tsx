@@ -47,7 +47,7 @@ export default function FinanceTicker() {
 
   return (
     <div style={{
-      background: 'var(--a-dim)',
+      background: 'var(--a-pale)',
       borderBottom: '1px solid var(--a-bd)',
       overflow: 'hidden',
       display: 'flex',
