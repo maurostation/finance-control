@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Sparkles, FileText } from 'lucide-react';
-import { CATEGORIES } from '@/lib/types';
+import { X, Sparkles, FileText, Pencil } from 'lucide-react';
+import { CATEGORIES, Transaction } from '@/lib/types';
 import { parseNaturalAmount } from '@/lib/utils';
 
 interface Props {
   cards: Array<{ id: string; name: string }>;
   onClose: () => void;
   onSave: (data: Record<string, unknown>) => Promise<void>;
+  editTx?: Transaction | null;
 }
 
 type Mode = 'natural' | 'form';
@@ -26,7 +27,8 @@ function guessDescription(text: string): string {
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase() : text;
 }
 
-export default function TransactionSheet({ cards, onClose, onSave }: Props) {
+export default function TransactionSheet({ cards, onClose, onSave, editTx }: Props) {
+  const isEditing = !!editTx;
   const [isDesktop, setIsDesktop] = useState(false);
   const [mode, setMode] = useState<Mode>('form');
   const [nlText, setNlText] = useState('');
@@ -48,6 +50,20 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (editTx) {
+      setType(editTx.type);
+      setAmount(editTx.amount.toString());
+      setDescription(editTx.description);
+      setCategory(editTx.category);
+      setDate(editTx.date);
+      setCardId(editTx.card_id || '');
+      setInstallments(1);
+      setMode('form');
+    }
+  }, [editTx]);
 
   // Close on Escape
   useEffect(() => {
@@ -81,13 +97,25 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
   async function handleFormSave() {
     if (!amount || !description || !category) return;
     setLoading(true);
-    await onSave({
-      type, amount: parseFloat(amount.replace(',', '.')),
-      description, category, date,
+
+    const data: Record<string, unknown> = {
+      type,
+      amount: parseFloat(amount.replace(',', '.')),
+      description,
+      category,
+      date,
       card_id: cardId || null,
-      is_installment: installments > 1,
-      total_installments: installments > 1 ? installments : null,
-    });
+    };
+
+    if (isEditing && editTx) {
+      // Include id so layout knows to update, not insert
+      data.id = editTx.id;
+    } else {
+      data.is_installment = installments > 1;
+      data.total_installments = installments > 1 ? installments : null;
+    }
+
+    await onSave(data);
     setSaved(true);
     setTimeout(onClose, 700);
   }
@@ -149,21 +177,28 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <ModeBtn m="natural" label="IA" Icon={Sparkles} />
-            <ModeBtn m="form" label="Form" Icon={FileText} />
-          </div>
+          {isEditing ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--a-dim)', borderRadius: 8, padding: '6px 12px' }}>
+              <Pencil size={12} color="var(--a)" />
+              <span style={{ fontSize: '.78rem', fontWeight: 600, color: 'var(--a)' }}>Editando lançamento</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <ModeBtn m="natural" label="IA" Icon={Sparkles} />
+              <ModeBtn m="form" label="Form" Icon={FileText} />
+            </div>
+          )}
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx-4)', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6 }}>
             <X size={18} />
           </button>
         </div>
 
         <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.02em', marginBottom: 16 }}>
-          Novo lançamento
+          {isEditing ? 'Editar lançamento' : 'Novo lançamento'}
         </p>
 
-        {/* Natural language */}
-        {mode === 'natural' && (
+        {/* Natural language — hidden in edit mode */}
+        {mode === 'natural' && !isEditing && (
           <div>
             <p style={{ fontSize: '.83rem', color: 'var(--tx-3)', marginBottom: 10 }}>
               Descreva em linguagem natural:
@@ -208,7 +243,7 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
         )}
 
         {/* Form */}
-        {mode === 'form' && (
+        {(mode === 'form' || isEditing) && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {(['expense', 'income'] as TxType[]).map(t => (
@@ -239,12 +274,12 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
                 {CATEGORIES[type].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isEditing ? '1fr' : '1fr 1fr', gap: 8 }}>
               <div>
                 <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Data</label>
                 <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} />
               </div>
-              {type === 'expense' && (
+              {!isEditing && type === 'expense' && (
                 <div>
                   <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Parcelas</label>
                   <select className="input" value={installments} onChange={e => setInstallments(Number(e.target.value))}>
@@ -264,8 +299,13 @@ export default function TransactionSheet({ cards, onClose, onSave }: Props) {
                 </select>
               </div>
             )}
+            {isEditing && (
+              <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace" }}>
+                * Edição altera apenas este lançamento
+              </p>
+            )}
             <button className="btn-amber" onClick={handleFormSave} disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
-              {saved ? '✓ Salvo!' : loading ? 'Salvando...' : 'Salvar lançamento'}
+              {saved ? '✓ Salvo!' : loading ? 'Salvando...' : isEditing ? 'Salvar edição' : 'Salvar lançamento'}
             </button>
           </div>
         )}

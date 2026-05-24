@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { supabase, getTransactions, deleteTransaction } from '@/lib/supabase';
 import { Transaction } from '@/lib/types';
 import { formatCurrency, getCurrentMonth } from '@/lib/utils';
-import { Trash2, Filter, TrendingUp, TrendingDown } from 'lucide-react';
-import { onRefresh } from '@/lib/refresh';
+import { Trash2, TrendingUp, TrendingDown, Pencil } from 'lucide-react';
+import { onRefresh, openForEdit } from '@/lib/refresh';
+import { ExtratoSkeleton } from '@/components/Skeleton';
 
 const MONTHS = Array.from({ length: 6 }, (_, i) => {
   const d = new Date();
@@ -24,6 +25,7 @@ export default function ExtratoPage() {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -44,8 +46,10 @@ export default function ExtratoPage() {
   }, [userId, month]);
 
   async function loadTx(uid: string, m: string) {
+    setLoading(true);
     const { data } = await getTransactions(uid, m);
     setTransactions(data || []);
+    setLoading(false);
   }
 
   async function handleDelete(id: string) {
@@ -63,6 +67,8 @@ export default function ExtratoPage() {
     return acc;
   }, {});
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  if (loading) return <ExtratoSkeleton />;
 
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"0 0 40px" }}>
@@ -178,12 +184,22 @@ export default function ExtratoPage() {
                   }}>
                     {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                   </p>
-                  <button
-                    onClick={() => handleDelete(tx.id)}
-                    style={{ background:'none', border:'none', cursor:'pointer', color:'var(--tx-4)', padding:'2px 0 0', display:'block', marginLeft:'auto' }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:4 }}>
+                    <button
+                      onClick={() => openForEdit(tx)}
+                      title="Editar lançamento"
+                      style={{ background:'none', border:'none', cursor:'pointer', color:'var(--a)', padding:0, display:'flex' }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(tx.id)}
+                      title="Excluir lançamento"
+                      style={{ background:'none', border:'none', cursor:'pointer', color:'var(--tx-4)', padding:0, display:'flex' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -50,58 +50,30 @@ export default function FinanceTicker() {
       background: 'var(--a-dim)',
       borderBottom: '1px solid var(--a-bd)',
       overflow: 'hidden',
-      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       height: 44,
     }}>
-      {/* Left pin: icon + fade */}
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 2,
-        display: 'flex', alignItems: 'center',
-        paddingLeft: 16, paddingRight: 36,
-        background: 'linear-gradient(90deg, var(--a-pale) 60%, transparent 100%)',
-        pointerEvents: 'none',
-      }}>
-        <Lightbulb size={14} color="var(--a)" strokeWidth={2} />
-      </div>
-
-      {/* Right fade */}
-      <div style={{
-        position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2,
-        width: 56,
-        background: 'linear-gradient(270deg, var(--a-pale) 40%, transparent 100%)',
-        pointerEvents: 'none',
-      }} />
-
       {/* Scrolling track */}
       <div style={{
         display: 'flex',
         whiteSpace: 'nowrap',
         animation: 'tickerScroll 60s linear infinite',
-        paddingLeft: 52,
+        paddingLeft: 24,
         alignItems: 'center',
       }}>
         {items.map((tip, i) => (
           <span key={i} style={{
             display: 'inline-flex',
             alignItems: 'center',
+            gap: 20,
             fontSize: '.82rem',
             color: 'var(--tx-2)',
             lineHeight: 1,
-            paddingRight: 64,
+            paddingRight: 48,
           }}>
+            <Lightbulb size={12} color="var(--a)" strokeWidth={2} style={{ flexShrink: 0 }} />
             {tip}
-            {/* Separator dot */}
-            <span style={{
-              display: 'inline-block',
-              width: 5, height: 5,
-              borderRadius: '50%',
-              background: 'var(--a)',
-              opacity: 0.45,
-              marginLeft: 64,
-              flexShrink: 0,
-            }} />
           </span>
         ))}
       </div>

@@ -5,10 +5,12 @@ import { supabase, getPlannedPurchases, insertPlannedPurchase, markPurchaseBough
 import { PlannedPurchase, CATEGORIES } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Plus, ShoppingBag, CheckCircle, X, Tag, AlertCircle } from 'lucide-react';
+import { PlanejadoSkeleton } from '@/components/Skeleton';
 
 export default function PlanejadoPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBought, setShowBought] = useState(false);
 
@@ -25,6 +27,7 @@ export default function PlanejadoPage() {
       setUserId(user.id);
       const { data } = await getPlannedPurchases(user.id);
       setPurchases(data || []);
+      setLoading(false);
     });
   }, []);
 
@@ -115,6 +118,8 @@ export default function PlanejadoPage() {
       </div>
     );
   }
+
+  if (loading) return <PlanejadoSkeleton />;
 
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"0 0 40px" }}>

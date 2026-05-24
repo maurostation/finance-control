@@ -9,6 +9,7 @@ import CardWidget from '@/components/CardWidget';
 import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { onRefresh } from '@/lib/refresh';
+import { DashboardSkeleton } from '@/components/Skeleton';
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -16,8 +17,10 @@ export default function DashboardPage() {
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
   const [savings, setSavings] = useState<SavingsGoal | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function loadData(uid: string) {
+    setLoading(true);
     const [txRes, cardsRes, purchasesRes, savingsRes] = await Promise.all([
       getTransactions(uid, getCurrentMonth()),
       getCards(uid),
@@ -28,6 +31,7 @@ export default function DashboardPage() {
     setCards(cardsRes.data || []);
     setPurchases(purchasesRes.data || []);
     setSavings(savingsRes.data || null);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -71,6 +75,8 @@ export default function DashboardPage() {
   }, [savings]);
 
   const recentTx = transactions.slice(0, 6);
+
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div style={{ padding: '32px 32px 40px', maxWidth: 1200, margin: '0 auto' }}>

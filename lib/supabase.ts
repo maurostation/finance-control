@@ -34,6 +34,10 @@ export async function insertTransaction(data: Record<string, unknown>) {
   return supabase.from('transactions').insert(data).select().single();
 }
 
+export async function updateTransaction(id: string, data: Record<string, unknown>) {
+  return supabase.from('transactions').update(data).eq('id', id).select().single();
+}
+
 export async function deleteTransaction(id: string) {
   return supabase.from('transactions').delete().eq('id', id);
 }

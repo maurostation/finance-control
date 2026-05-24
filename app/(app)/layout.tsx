@@ -7,9 +7,9 @@ import BottomNav from '@/components/BottomNav';
 import TransactionSheet from '@/components/TransactionSheet';
 import SidebarInsights from '@/components/SidebarInsights';
 import FinanceTicker from '@/components/FinanceTicker';
-import { supabase, getCards, insertTransaction } from '@/lib/supabase';
-import { Card } from '@/lib/types';
-import { broadcastRefresh } from '@/lib/refresh';
+import { supabase, getCards, insertTransaction, updateTransaction } from '@/lib/supabase';
+import { Card, Transaction } from '@/lib/types';
+import { broadcastRefresh, onOpenEdit } from '@/lib/refresh';
 import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Banknote } from 'lucide-react';
 
 const NAV_LINKS = [
@@ -124,6 +124,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [showSheet, setShowSheet] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -136,6 +137,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setAuthReady(true);
     });
   }, [router]);
+
+  // ── Listen for edit-transaction events dispatched by extrato ──
+  useEffect(() => {
+    return onOpenEdit(tx => {
+      setEditingTx(tx);
+      setShowSheet(true);
+    });
+  }, []);
 
   // ── Push notification scheduler (fires on app open if 2+ days have passed) ──
   useEffect(() => {
@@ -185,6 +194,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleSave = useCallback(async (data: Record<string, unknown>) => {
     if (!userId) return;
+
+    // ── Edit mode: update existing transaction ──
+    if (data.id) {
+      const { id, ...fields } = data;
+      await updateTransaction(id as string, fields);
+      broadcastRefresh();
+      return;
+    }
+
+    // ── Insert mode ──
     const base: Record<string, unknown> = { ...data, user_id: userId };
 
     if ((base['is_installment'] as boolean) && ((base['total_installments'] as number) > 1)) {
@@ -235,8 +254,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {showSheet && (
         <TransactionSheet
           cards={cards}
-          onClose={() => setShowSheet(false)}
+          onClose={() => { setShowSheet(false); setEditingTx(null); }}
           onSave={handleSave}
+          editTx={editingTx}
         />
       )}
     </>

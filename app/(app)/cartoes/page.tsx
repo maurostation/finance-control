@@ -6,6 +6,7 @@ import { Card, Transaction } from '@/lib/types';
 import { formatCurrency, getCurrentMonth, daysUntil } from '@/lib/utils';
 import { Plus, CreditCard, X, TrendingDown } from 'lucide-react';
 import { onRefresh } from '@/lib/refresh';
+import { CardsPageSkeleton } from '@/components/Skeleton';
 
 const CARD_COLORS = ['#D97706','#7C3AED','#0EA5E9','#10B981','#EF4444','#EC4899'];
 
@@ -16,6 +17,7 @@ export default function CartoesPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
+  const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [closingDay, setClosingDay] = useState(10);
   const [dueDay, setDueDay] = useState(17);
@@ -24,12 +26,14 @@ export default function CartoesPage() {
   const [saving, setSaving] = useState(false);
 
   async function loadData(uid: string) {
+    setLoading(true);
     const [cardsRes, txRes] = await Promise.all([
       getCards(uid),
       getTransactions(uid, getCurrentMonth()),
     ]);
     setCards(cardsRes.data || []);
     setTransactions(txRes.data || []);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -65,6 +69,8 @@ export default function CartoesPage() {
     setShowForm(false);
     setName(''); setLimit(''); setSaving(false);
   }
+
+  if (loading) return <CardsPageSkeleton />;
 
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"0 0 40px" }}>
