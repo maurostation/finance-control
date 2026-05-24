@@ -6,6 +6,7 @@ import { Transaction, Card, PlannedPurchase, SavingsGoal } from '@/lib/types';
 import { formatCurrency, getCurrentMonth, getCurrentMonthLabel, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
+import RecurringSection from '@/components/RecurringSection';
 import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { onRefresh } from '@/lib/refresh';
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [savings, setSavings] = useState<SavingsGoal | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
 
   async function loadData(uid: string) {
     setLoading(true);
@@ -74,7 +76,13 @@ export default function DashboardPage() {
     setSavings(prev => prev ? { ...prev, current_amount: newAmount } : prev);
   }, [savings]);
 
-  const recentTx = transactions.slice(0, 6);
+  const recentTx = transactions
+    .filter(t => {
+      if (payFilter === 'debit') return !t.card_id;
+      if (payFilter === 'card')  return !!t.card_id;
+      return true;
+    })
+    .slice(0, 6);
 
   if (loading) return <DashboardSkeleton />;
 
@@ -211,20 +219,44 @@ export default function DashboardPage() {
 
       </div>
 
+      {/* ── Gastos fixos (recorrentes) ── */}
+      {userId && (
+        <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
+      )}
+
       {/* ── Recent transactions (full width) ── */}
-      {recentTx.length > 0 && (
+      {(recentTx.length > 0 || transactions.length > 0) && (
         <section style={{ marginTop:24 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
             <span className="eyebrow">Lançamentos recentes</span>
             <Link href="/extrato" style={{ fontSize:'.75rem', color:'var(--a)', fontWeight:500, textDecoration:'none', display:'flex', alignItems:'center', gap:3 }}>
               Ver extrato completo <ArrowRight size={12} />
             </Link>
+          </div>
+          {/* Débito / Cartão chips */}
+          <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+            {(['all','debit','card'] as const).map(f => (
+              <button key={f} onClick={() => setPayFilter(f)} style={{
+                padding:'4px 12px', borderRadius:99, fontSize:'.73rem', fontWeight:500,
+                border:'1px solid var(--bd-2)', cursor:'pointer',
+                background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
+                color: payFilter===f ? '#fff' : 'var(--tx-3)',
+                borderColor: payFilter===f ? 'var(--tx-2)' : 'var(--bd-2)',
+              }}>
+                {f === 'all' ? 'Todos' : f === 'debit' ? 'Débito' : 'Cartão'}
+              </button>
+            ))}
           </div>
           <div style={{
             background:'var(--sf)', borderRadius:14,
             boxShadow:'0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
             overflow:'hidden',
           }}>
+            {recentTx.length === 0 && (
+              <p style={{ textAlign:'center', padding:'24px', color:'var(--tx-4)', fontSize:'.78rem', fontFamily:"'Geist Mono',monospace" }}>
+                Nenhum lançamento neste filtro.
+              </p>
+            )}
             {recentTx.map((tx, i) => (
               <div key={tx.id} style={{
                 display:'flex', alignItems:'center', gap:12, padding:'13px 20px',

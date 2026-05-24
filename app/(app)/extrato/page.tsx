@@ -8,9 +8,10 @@ import { Trash2, TrendingUp, TrendingDown, Pencil } from 'lucide-react';
 import { onRefresh, openForEdit } from '@/lib/refresh';
 import { ExtratoSkeleton } from '@/components/Skeleton';
 
-const MONTHS = Array.from({ length: 6 }, (_, i) => {
+// +3 meses futuros → mês atual → -5 meses passados (9 total)
+const MONTHS = Array.from({ length: 9 }, (_, i) => {
   const d = new Date();
-  d.setMonth(d.getMonth() - i);
+  d.setMonth(d.getMonth() + 3 - i);
   return d.toISOString().slice(0, 7);
 });
 
@@ -23,6 +24,7 @@ function monthLabel(m: string) {
 export default function ExtratoPage() {
   const [month, setMonth] = useState(getCurrentMonth());
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,13 @@ export default function ExtratoPage() {
     setTransactions(prev => prev.filter(t => t.id !== id));
   }
 
-  const filtered = transactions.filter(t => filter === 'all' || t.type === filter);
+  const filtered = transactions
+    .filter(t => filter === 'all' || t.type === filter)
+    .filter(t => {
+      if (payFilter === 'debit') return !t.card_id;
+      if (payFilter === 'card')  return !!t.card_id;
+      return true;
+    });
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
@@ -112,8 +120,8 @@ export default function ExtratoPage() {
           ))}
         </div>
 
-        {/* Filter */}
-        <div style={{ display:'flex', gap:6, marginTop:10 }}>
+        {/* Filters */}
+        <div style={{ display:'flex', gap:6, marginTop:10, flexWrap:'wrap' }}>
           {(['all','income','expense'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
@@ -123,6 +131,18 @@ export default function ExtratoPage() {
               borderColor: filter===f ? 'var(--a)' : 'var(--bd-2)',
             }}>
               {f === 'all' ? 'Todos' : f === 'income' ? 'Entradas' : 'Saídas'}
+            </button>
+          ))}
+          <div style={{ width:1, background:'var(--bd-2)', margin:'0 2px' }} />
+          {(['all','debit','card'] as const).map(f => (
+            <button key={f} onClick={() => setPayFilter(f)} style={{
+              padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
+              border:'1px solid var(--bd-2)', cursor:'pointer',
+              background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
+              color: payFilter===f ? '#fff' : 'var(--tx-3)',
+              borderColor: payFilter===f ? 'var(--tx-2)' : 'var(--bd-2)',
+            }}>
+              {f === 'all' ? 'Forma' : f === 'debit' ? 'Débito' : 'Cartão'}
             </button>
           ))}
         </div>

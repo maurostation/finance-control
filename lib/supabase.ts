@@ -86,3 +86,11 @@ export async function getRecurringTemplates(userId: string) {
     .eq('user_id', userId)
     .eq('active', true);
 }
+
+export async function insertRecurringTemplate(data: Record<string, unknown>) {
+  return supabase.from('recurring_templates').insert(data).select().single();
+}
+
+export async function deactivateRecurringTemplate(id: string) {
+  return supabase.from('recurring_templates').update({ active: false }).eq('id', id);
+}
