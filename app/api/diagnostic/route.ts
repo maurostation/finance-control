@@ -11,10 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ diagnostic: 'Sem lançamentos suficientes para análise. Registre algumas transações primeiro.' });
     }
 
-    const totalIncome = transactions.filter((t: { type: string; amount: number }) => t.type === 'income').reduce((s: number, t: { amount: number }) => s + t.amount, 0);
+    const totalIncome  = transactions.filter((t: { type: string; amount: number }) => t.type === 'income').reduce((s: number, t: { amount: number }) => s + t.amount, 0);
     const totalExpense = transactions.filter((t: { type: string; amount: number }) => t.type === 'expense').reduce((s: number, t: { amount: number }) => s + t.amount, 0);
 
-    // Category breakdown
     const byCategory = transactions
       .filter((t: { type: string }) => t.type === 'expense')
       .reduce((acc: Record<string, number>, t: { category: string; amount: number }) => {
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
       }, {} as Record<string, number>);
 
     const topCategories = Object.entries(byCategory)
-      .sort(([,a],[,b]) => (b as number) - (a as number))
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .slice(0, 5)
       .map(([cat, val]) => `${cat}: R$${(val as number).toFixed(2)}`)
       .join(', ');
@@ -41,7 +40,7 @@ Escreva apenas o diagnóstico, sem saudações ou formatação.`;
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 200,
+      max_tokens: 220,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -49,6 +48,6 @@ Escreva apenas o diagnóstico, sem saudações ou formatação.`;
     return NextResponse.json({ diagnostic });
   } catch (err) {
     console.error('AI diagnostic error:', err);
-    return NextResponse.json({ diagnostic: 'Não foi possível gerar o diagnóstico agora. Verifique sua chave da API Anthropic.' }, { status: 500 });
+    return NextResponse.json({ diagnostic: 'Não foi possível gerar o diagnóstico agora.' }, { status: 500 });
   }
 }
