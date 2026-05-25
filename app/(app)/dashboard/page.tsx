@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
       {/* ── Hero header ── */}
       <div style={{
-        background: 'linear-gradient(105deg, #FFFBEB 0%, #FEF9F0 40%, #F8F9FB 100%)',
+        background: 'linear-gradient(105deg, #FFFFFF 0%, #F5F6F8 55%, #EDEEF1 100%)',
         borderRadius: 20,
         padding: '28px 32px',
         marginBottom: 24,
