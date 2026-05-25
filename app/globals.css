@@ -281,9 +281,10 @@ select.input {
 }
 
 /* Dashboard: week stats (2 tiles) + card column on same row on desktop */
+/* Mobile: 2-col grid for stats, cards span full width as carousel below */
 .week-and-cards {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 .week-stats-only {
@@ -291,12 +292,44 @@ select.input {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+/* Cards column — full-width on mobile, 3rd col on desktop */
+.cards-col {
+  grid-column: 1 / -1;
+}
+
+/* Horizontal scroll carousel on mobile, vertical stack on desktop */
+.cards-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.cards-carousel::-webkit-scrollbar { display: none; }
+.cards-carousel > * {
+  flex-shrink: 0;
+  width: min(74vw, 260px);
+  scroll-snap-align: start;
+}
+
 @media (min-width: 768px) {
   .week-and-cards {
-    display: grid;
     grid-template-columns: 1fr 1fr 1.6fr;
-    gap: 12px;
     align-items: start;
+  }
+  .cards-col {
+    grid-column: auto;
+  }
+  .cards-carousel {
+    flex-direction: column;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+  .cards-carousel > * {
+    width: auto;
   }
 }
 

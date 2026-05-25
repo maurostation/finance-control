@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, getTransactions, getCards, getPlannedPurchases, getSavings, updateSavings } from '@/lib/supabase';
+import { supabase, getTransactions, getCards, getPlannedPurchases, getSavings, updateSavings, getFutureTransactions } from '@/lib/supabase';
 import { Transaction, Card, PlannedPurchase, SavingsGoal } from '@/lib/types';
 import { formatCurrency, getCurrentMonth, getCurrentMonthLabel, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
 import RecurringSection from '@/components/RecurringSection';
-import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
+import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { onRefresh } from '@/lib/refresh';
 import { DashboardSkeleton } from '@/components/Skeleton';
@@ -17,22 +17,25 @@ export default function DashboardPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
   const [savings, setSavings] = useState<SavingsGoal | null>(null);
+  const [futureTx, setFutureTx] = useState<Transaction[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
 
   async function loadData(uid: string) {
     setLoading(true);
-    const [txRes, cardsRes, purchasesRes, savingsRes] = await Promise.all([
+    const [txRes, cardsRes, purchasesRes, savingsRes, futureRes] = await Promise.all([
       getTransactions(uid, getCurrentMonth()),
       getCards(uid),
       getPlannedPurchases(uid),
       getSavings(uid),
+      getFutureTransactions(uid),
     ]);
     setTransactions(txRes.data || []);
     setCards(cardsRes.data || []);
     setPurchases(purchasesRes.data || []);
     setSavings(savingsRes.data || null);
+    setFutureTx(futureRes.data || []);
     setLoading(false);
   }
 
@@ -189,16 +192,10 @@ export default function DashboardPage() {
             </div>
           ))}
 
-          {/* Cards column — só renderiza quando há cartões */}
+          {/* Cards column — carousel mobile, stack desktop */}
           {cards.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span className="eyebrow">Cartões</span>
-                <Link href="/cartoes" style={{ fontSize: '.75rem', color: 'var(--a)', fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  Ver todos <ArrowRight size={12} />
-                </Link>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="cards-col">
+              <div className="cards-carousel">
                 {cards.slice(0, 3).map(card => (
                   <CardWidget key={card.id} card={card} openBillAmount={cardBill(card.id)} onClick={() => {}} />
                 ))}
@@ -225,6 +222,59 @@ export default function DashboardPage() {
           <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
         </div>
       )}
+
+      {/* ── Próximos meses ── */}
+      {futureTx.length > 0 && (() => {
+        const grouped = futureTx.reduce<Record<string, Transaction[]>>((acc, t) => {
+          const m = t.date.slice(0, 7);
+          (acc[m] = acc[m] || []).push(t);
+          return acc;
+        }, {});
+        const months = Object.keys(grouped).sort();
+        return (
+          <section style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <CalendarClock size={11} color="var(--a)" />
+              <span className="eyebrow">Próximos meses</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {months.map(month => {
+                const txs = grouped[month];
+                const out = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+                const inc = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+                const net = inc - out;
+                const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+                  .format(new Date(month + '-01T00:00:00'));
+                return (
+                  <div key={month} style={{
+                    background: 'var(--sf)', borderRadius: 14, padding: '14px 18px',
+                    boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    <div>
+                      <p style={{ fontSize: '.85rem', fontWeight: 600, color: 'var(--tx)', textTransform: 'capitalize' }}>{label}</p>
+                      <p style={{ fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)', marginTop: 2 }}>
+                        {txs.length} lançamento{txs.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      {inc > 0 && <span style={{ fontSize: '.75rem', color: 'var(--green)', fontWeight: 600 }}><span className="money">+{formatCurrency(inc)}</span></span>}
+                      {out > 0 && <span style={{ fontSize: '.75rem', color: 'var(--red)', fontWeight: 600 }}><span className="money">-{formatCurrency(out)}</span></span>}
+                      <span style={{
+                        fontSize: '.9rem', fontWeight: 700,
+                        color: net >= 0 ? 'var(--tx)' : 'var(--red)',
+                        borderLeft: '1px solid var(--bd)', paddingLeft: 14,
+                      }}>
+                        <span className="money">{net >= 0 ? '+' : ''}{formatCurrency(net)}</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ── Recent transactions (full width) ── */}
       {(recentTx.length > 0 || transactions.length > 0) && (

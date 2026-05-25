@@ -1,4 +1,4 @@
-// Controle Financeiro — Service Worker
+// Finance Hub — Service Worker
 const CACHE = 'cf-v1';
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -8,7 +8,7 @@ self.addEventListener('activate', e => e.waitUntil(clients.claim()));
 self.addEventListener('push', function (e) {
   const data = e.data ? e.data.json() : {};
   e.waitUntil(
-    self.registration.showNotification(data.title || 'Controle Financeiro', {
+    self.registration.showNotification(data.title || 'Finance Hub', {
       body: data.body || 'Você tem dados financeiros para revisar!',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
@@ -33,7 +33,7 @@ self.addEventListener('notificationclick', function (e) {
 // Triggered by the main thread when it's time to show a scheduled notification
 self.addEventListener('message', function (e) {
   if (e.data?.type === 'SHOW_REMINDER') {
-    self.registration.showNotification('Controle Financeiro', {
+    self.registration.showNotification('Finance Hub', {
       body: e.data.body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',

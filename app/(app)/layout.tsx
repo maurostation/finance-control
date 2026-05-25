@@ -10,7 +10,7 @@ import FinanceTicker from '@/components/FinanceTicker';
 import { supabase, getCards, insertTransaction, updateTransaction } from '@/lib/supabase';
 import { Card, Transaction } from '@/lib/types';
 import { broadcastRefresh, onOpenEdit } from '@/lib/refresh';
-import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Banknote } from 'lucide-react';
+import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Banknote, Eye, EyeOff } from 'lucide-react';
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Início',    Icon: LayoutDashboard },
@@ -29,9 +29,11 @@ const PUSH_TIPS = [
   'Sua reserva está crescendo? Registre seus lançamentos e veja o progresso real.',
 ];
 
-function Sidebar({ onAddClick, onSignOut, pathname, userId }: {
+function Sidebar({ onAddClick, onSignOut, onToggleValues, valuesHidden, pathname, userId }: {
   onAddClick: () => void;
   onSignOut: () => void;
+  onToggleValues: () => void;
+  valuesHidden: boolean;
   pathname: string;
   userId: string | null;
 }) {
@@ -102,14 +104,29 @@ function Sidebar({ onAddClick, onSignOut, pathname, userId }: {
       {/* Insights panel */}
       <SidebarInsights userId={userId} />
 
+      {/* Eye toggle */}
+      <button onClick={onToggleValues} style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '9px 12px', borderRadius: 9,
+        background: valuesHidden ? 'var(--a-dim)' : 'none',
+        border: 'none', cursor: 'pointer',
+        color: valuesHidden ? 'var(--a)' : 'var(--tx-4)', fontSize: '.85rem',
+        transition: 'all .15s', width: '100%', marginBottom: 2,
+      }}
+      onMouseEnter={e => { if (!valuesHidden) (e.currentTarget as HTMLElement).style.color = 'var(--tx)'; }}
+      onMouseLeave={e => { if (!valuesHidden) (e.currentTarget as HTMLElement).style.color = 'var(--tx-4)'; }}
+      >
+        {valuesHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+        {valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+      </button>
+
       {/* Sign out */}
       <button onClick={onSignOut} style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 12px', borderRadius: 9,
         background: 'none', border: 'none', cursor: 'pointer',
         color: 'var(--tx-4)', fontSize: '.85rem',
-        transition: 'color .15s',
-        width: '100%',
+        transition: 'color .15s', width: '100%',
       }}
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--tx)'}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--tx-4)'}
@@ -128,6 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [valuesHidden, setValuesHidden] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -136,7 +154,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       getCards(user.id).then(({ data }) => setCards(data || []));
       setAuthReady(true);
     });
+    // Restore eye state
+    try { if (localStorage.getItem('fc-values-hidden') === 'true') setValuesHidden(true); } catch {}
   }, [router]);
+
+  const toggleValues = useCallback(() => {
+    setValuesHidden(v => {
+      const next = !v;
+      try { localStorage.setItem('fc-values-hidden', next.toString()); } catch {}
+      return next;
+    });
+  }, []);
 
   // ── Listen for edit-transaction events dispatched by extrato ──
   useEffect(() => {
@@ -230,10 +258,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {/* Mobile eye toggle */}
+      <button className="mobile-eye-btn" onClick={toggleValues}>
+        {valuesHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+        {valuesHidden ? 'Mostrar' : 'Ocultar'}
+      </button>
+
       {/* Desktop layout */}
-      <div style={{ display: 'flex', minHeight: '100svh' }} className="desktop-layout">
+      <div style={{ display: 'flex', minHeight: '100svh' }} className={`desktop-layout${valuesHidden ? ' values-hidden' : ''}`}>
         <div className="sidebar-wrapper">
-          <Sidebar onAddClick={() => setShowSheet(true)} onSignOut={handleSignOut} pathname={pathname} userId={userId} />
+          <Sidebar onAddClick={() => setShowSheet(true)} onSignOut={handleSignOut} onToggleValues={toggleValues} valuesHidden={valuesHidden} pathname={pathname} userId={userId} />
         </div>
         <main className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
           {/* Full-width sticky ticker at top of every page */}

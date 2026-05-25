@@ -1,6 +1,6 @@
 {
-  "name": "Controle Financeiro",
-  "short_name": "Ctrl Fin",
+  "name": "Finance Hub",
+  "short_name": "Finance Hub",
   "description": "Sua central financeira pessoal",
   "start_url": "/dashboard",
   "display": "standalone",

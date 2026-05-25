@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RecurringTemplate, Card, Transaction, CATEGORIES } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -31,6 +31,7 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
+  const autoLaunchedRef = useRef(false);
 
   // Form state
   const [rType, setRType] = useState<'expense' | 'income'>('expense');
@@ -44,6 +45,37 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
   useEffect(() => {
     getRecurringTemplates(userId).then(({ data }) => setTemplates(data || []));
   }, [userId]);
+
+  // Auto-launch any template not yet launched this month (runs once per mount)
+  useEffect(() => {
+    if (autoLaunchedRef.current || !templates.length || !userId) return;
+    autoLaunchedRef.current = true;
+
+    const notLaunched = templates.filter(
+      t => !currentMonthTx.some(tx => tx.is_recurring && tx.description === t.description)
+    );
+    if (!notLaunched.length) return;
+
+    const now = new Date();
+    Promise.all(notLaunched.map(async t => {
+      const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = `${now.getFullYear()}-${month}-${day}`;
+      await insertTransaction({
+        user_id: userId,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        category: t.category,
+        card_id: t.card_id || null,
+        date,
+        is_recurring: true,
+        is_installment: false,
+      });
+    })).then(() => broadcastRefresh());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates]);
 
   // A template is considered "launched" this month if there's a is_recurring tx with same description
   function isLaunched(t: RecurringTemplate) {
@@ -134,19 +166,23 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
               autoFocus
             />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <input
-                className="input"
-                type="number"
-                placeholder="Valor (R$)"
-                value={rAmount}
-                onChange={e => setRAmount(e.target.value)}
-              />
               <div>
+                <label style={{ fontSize: '.72rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Valor (R$)</label>
+                <input
+                  className="input"
+                  type="number"
+                  placeholder="0,00"
+                  value={rAmount}
+                  onChange={e => setRAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '.72rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Dia de cobrança</label>
                 <input
                   className="input"
                   type="number"
                   min={1} max={31}
-                  placeholder="Dia do mês"
+                  placeholder="Ex: 10"
                   value={rDay}
                   onChange={e => setRDay(Number(e.target.value))}
                 />
