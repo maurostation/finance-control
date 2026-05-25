@@ -442,10 +442,17 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ background: 'var(--sf)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)' }}>
                       {selectedTxs.map((tx, i) => (
-                        <div key={tx.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
-                          borderBottom: i < selectedTxs.length - 1 ? '1px solid var(--bd)' : 'none',
-                        }}>
+                        <div key={tx.id}
+                          role="button" tabIndex={0}
+                          onClick={() => openForEdit(tx)}
+                          onKeyDown={e => e.key === 'Enter' && openForEdit(tx)}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+                            borderBottom: i < selectedTxs.length - 1 ? '1px solid var(--bd)' : 'none',
+                            cursor: 'pointer', transition: 'background .15s',
+                          }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {tx.type === 'income' ? <TrendingUp size={13} color="var(--green)" /> : <TrendingDown size={13} color="var(--tx-3)" />}
                           </div>
