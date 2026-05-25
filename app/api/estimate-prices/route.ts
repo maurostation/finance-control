@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(req: NextRequest) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error('estimate-prices: ANTHROPIC_API_KEY not set');
+    return NextResponse.json({ prices: [], error: 'API key not configured' }, { status: 500 });
+  }
+
+  const client = new Anthropic({ apiKey });
+
   try {
     const { items } = await req.json() as { items: string[] };
 
@@ -14,7 +20,7 @@ export async function POST(req: NextRequest) {
     const itemList = items.map(i => `- ${i}`).join('\n');
 
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -33,14 +39,15 @@ ${itemList}`,
     // Extract JSON array from response (handle any stray text)
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.error('No JSON array in response:', text);
+      console.error('estimate-prices: no JSON array in response:', text);
       return NextResponse.json({ prices: [] });
     }
 
     const prices = JSON.parse(jsonMatch[0]) as Array<{ name: string; price: number }>;
     return NextResponse.json({ prices });
   } catch (err) {
-    console.error('estimate-prices error:', err);
-    return NextResponse.json({ prices: [] }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('estimate-prices error:', msg);
+    return NextResponse.json({ prices: [], error: msg }, { status: 500 });
   }
 }

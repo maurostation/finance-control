@@ -6,13 +6,12 @@ import { Transaction, Card, PlannedPurchase, SavingsGoal, RecurringTemplate } fr
 import { formatCurrency, getCurrentMonth, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
-import RecurringSection from '@/components/RecurringSection';
 import {
   TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle,
   CalendarClock, Eye, EyeOff, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
-import { onRefresh, requestValuesToggle, onValuesState } from '@/lib/refresh';
+import { onRefresh, requestValuesToggle, onValuesState, openForEdit } from '@/lib/refresh';
 import { DashboardSkeleton } from '@/components/Skeleton';
 
 function fmtMonth(m: string): string {
@@ -46,6 +45,7 @@ export default function DashboardPage() {
   const [heroHidden, setHeroHidden]           = useState(false);
   const [futureMonth, setFutureMonth]         = useState('');
   const [heroMonth, setHeroMonth]             = useState(getDefaultHeroMonth);
+  const [prevMonthCardBill, setPrevMonthCardBill] = useState(0);
 
   // ── Load static data (cards, purchases, savings, future tx, recurring) ─────
   async function loadStaticData(uid: string) {
@@ -116,6 +116,22 @@ export default function DashboardPage() {
     }
   }, [futureTx, futureMonth]);
 
+  // ── Load previous month's card bill when viewing a future month ───────────
+  useEffect(() => {
+    const isFuture = heroMonth > getCurrentMonth();
+    if (!userId || !isFuture) { setPrevMonthCardBill(0); return; }
+    const d = new Date(heroMonth + '-01T00:00:00');
+    d.setMonth(d.getMonth() - 1);
+    const prevMonth = d.toISOString().slice(0, 7);
+    getTransactions(userId, prevMonth).then(({ data }) => {
+      const bill = (data || [])
+        .filter(t => !!t.card_id && t.type === 'expense')
+        .reduce((s, t) => s + t.amount, 0);
+      setPrevMonthCardBill(bill);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, heroMonth]);
+
   // ── Month navigation ───────────────────────────────────────────────────────
   const currentMonth = getCurrentMonth();
   const isCurrentMonth = heroMonth === currentMonth;
@@ -149,7 +165,8 @@ export default function DashboardPage() {
 
   // What to display in hero depends on which month we're viewing
   const displayIncome  = isFutureMonth ? projectedIncome  : totalIncome;
-  const displayExpense = isFutureMonth ? projectedExpense : debitExpense;
+  // Future: recurring fixed costs + previous month's card bill; current: debit only (card deferred)
+  const displayExpense = isFutureMonth ? projectedExpense + prevMonthCardBill : debitExpense;
   const balance        = displayIncome - displayExpense;
   const budgetPct      = displayIncome > 0 ? Math.min((displayExpense / displayIncome) * 100, 100) : 0;
 
@@ -252,12 +269,19 @@ export default function DashboardPage() {
                   <span>{heroHidden ? 'Mostrar' : 'Ocultar'}</span>
                 </button>
               </div>
-              {/* Card bill deferred info */}
+              {/* Card bill deferred info — current month */}
               {isCurrentMonth && cardExpense > 0 && (
                 <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", marginTop: 4 }}>
                   Fatura cartão <span style={{ color: 'var(--a)' }}>→ {nextMonthShort}</span>
                   {': '}
                   <span className="money" style={{ color: 'var(--red)' }}>-{formatCurrency(cardExpense)}</span>
+                </p>
+              )}
+              {/* Card bill from previous month — shown in future month projection */}
+              {isFutureMonth && prevMonthCardBill > 0 && (
+                <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", marginTop: 4 }}>
+                  Fatura cartão anterior incluída:{' '}
+                  <span className="money" style={{ color: 'var(--red)' }}>-{formatCurrency(prevMonthCardBill)}</span>
                 </p>
               )}
             </div>
@@ -288,7 +312,7 @@ export default function DashboardPage() {
             </div>
             <p style={{ marginTop: 5, fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)' }}>
               {isFutureMonth
-                ? `${budgetPct.toFixed(0)}% comprometido — ${recurringTemplates.length} lançamento${recurringTemplates.length !== 1 ? 's' : ''} fixo${recurringTemplates.length !== 1 ? 's' : ''}`
+                ? `${budgetPct.toFixed(0)}% comprometido — fixos${prevMonthCardBill > 0 ? ' + fatura cartão' : ''}`
                 : `${budgetPct.toFixed(0)}% da renda utilizada${isCurrentMonth && cardExpense > 0 ? ' (excl. fatura)' : ''}`}
             </p>
           </div>
@@ -354,13 +378,6 @@ export default function DashboardPage() {
         )}
 
       </div>
-
-      {/* ── Gastos fixos (recorrentes) ── */}
-      {userId && (
-        <div style={{ marginTop: 20 }}>
-          <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
-        </div>
-      )}
 
       {/* ── Próximos meses — tab nav ── */}
       {(() => {
@@ -484,13 +501,20 @@ export default function DashboardPage() {
               </p>
             )}
             {recentTx.map((tx, i) => (
-              <div key={tx.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
-                borderBottom: i < recentTx.length - 1 ? '1px solid var(--bd)' : 'none',
-                transition: 'background .15s',
-              }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              <div key={tx.id}
+                role="button"
+                tabIndex={0}
+                title="Clique para editar ou excluir"
+                onClick={() => openForEdit(tx)}
+                onKeyDown={e => e.key === 'Enter' && openForEdit(tx)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+                  borderBottom: i < recentTx.length - 1 ? '1px solid var(--bd)' : 'none',
+                  transition: 'background .15s',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
                 <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {tx.type === 'income' ? <TrendingUp size={15} color="var(--green)" /> : <TrendingDown size={15} color="var(--tx-3)" />}

@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 /* ════════════════════════════
-   DESIGN TOKENS — Orange Finance Hub
+   DESIGN TOKENS — Amber Finance Hub
 ════════════════════════════ */
 :root {
   --bg:     #F8F9FB;
@@ -18,12 +18,12 @@
   --tx-3:   #7A8394;
   --tx-4:   #B0B8C4;
 
-  --a:      #EA580C;
-  --a-lt:   #F97316;
-  --a-pale: #FFF7ED;
-  --a-dim:  rgba(234,88,12,.07);
-  --a-glow: rgba(234,88,12,.14);
-  --a-bd:   rgba(234,88,12,.22);
+  --a:      #D97706;
+  --a-lt:   #F59E0B;
+  --a-pale: #FFFBEB;
+  --a-dim:  rgba(217,119,6,.07);
+  --a-glow: rgba(217,119,6,.14);
+  --a-bd:   rgba(217,119,6,.22);
 
   --green:  #10B981;
   --red:    #EF4444;
@@ -31,7 +31,7 @@
 
   --r:      14px;
   --nav-h:  60px;
-  --ticker-h: 36px; /* height of the sticky ticker bar (excl. safe area) */
+  --ticker-h: 44px; /* height of the sticky ticker bar (excl. safe area) */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -83,12 +83,12 @@ body::before {
   font-weight: 500;
   cursor: pointer;
   transition: background .15s, transform .15s, box-shadow .2s;
-  box-shadow: 0 2px 12px rgba(234,88,12,.22);
+  box-shadow: 0 2px 12px rgba(217,119,6,.22);
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.btn-amber:hover { background: #C2410C; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(234,88,12,.32); }
+.btn-amber:hover { background: #B45309; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(217,119,6,.32); }
 .btn-amber:active { transform: translateY(0); }
 
 .btn-ghost {
@@ -504,10 +504,10 @@ select.input {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 24px rgba(234,88,12,.45);
+  box-shadow: 0 4px 24px rgba(217,119,6,.45);
   transition: box-shadow .2s, transform .12s;
 }
-.mobile-fab:active { transform: translateY(2px); box-shadow: 0 2px 12px rgba(234,88,12,.3); }
+.mobile-fab:active { transform: translateY(2px); box-shadow: 0 2px 12px rgba(217,119,6,.3); }
 @media (min-width: 768px) {
   .mobile-fab { display: none; }
 }
