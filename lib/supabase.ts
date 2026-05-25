@@ -38,7 +38,16 @@ export async function updateTransaction(id: string, data: Record<string, unknown
   return supabase.from('transactions').update(data).eq('id', id).select().single();
 }
 
+/** Delete a single transaction, preserving any future installments by unlinking them first. */
 export async function deleteTransaction(id: string) {
+  // Break any parent→child cascade chain so future installments survive
+  await supabase.from('transactions').update({ parent_id: null }).eq('parent_id', id);
+  return supabase.from('transactions').delete().eq('id', id);
+}
+
+/** Delete a transaction AND all its future installments (parent + children). */
+export async function deleteTransactionAll(id: string) {
+  await supabase.from('transactions').delete().eq('parent_id', id);
   return supabase.from('transactions').delete().eq('id', id);
 }
 

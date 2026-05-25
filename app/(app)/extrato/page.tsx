@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, getTransactions, getCards, deleteTransaction } from '@/lib/supabase';
+import { supabase, getTransactions, getCards, deleteTransaction, deleteTransactionAll } from '@/lib/supabase';
 import { Transaction, Card } from '@/lib/types';
 import { formatCurrency, getCurrentMonth } from '@/lib/utils';
-import { Trash2, TrendingUp, TrendingDown, Pencil, Calendar } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Pencil, Calendar, AlertTriangle } from 'lucide-react';
 import { onRefresh, openForEdit } from '@/lib/refresh';
 import { ExtratoSkeleton } from '@/components/Skeleton';
 import RecurringSection from '@/components/RecurringSection';
@@ -22,9 +22,147 @@ function monthLabel(m: string) {
     .format(new Date(Number(y), Number(mo) - 1, 1));
 }
 
+// ── Styled delete confirmation modal ────────────────────────────────────────
+function DeleteConfirm({
+  tx,
+  onCancel,
+  onConfirmSingle,
+  onConfirmAll,
+}: {
+  tx: Transaction;
+  onCancel: () => void;
+  onConfirmSingle: () => void;
+  onConfirmAll: () => void;
+}) {
+  const isParentInstallment = tx.is_installment && !tx.parent_id && (tx.total_installments ?? 0) > 1;
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 600,
+        background: 'rgba(14,18,25,.5)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+        animation: 'fadeIn .15s ease',
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--sf)',
+          borderRadius: 16,
+          padding: '24px',
+          maxWidth: 380,
+          width: '100%',
+          boxShadow: '0 24px 80px rgba(14,18,25,.18), 0 8px 32px rgba(14,18,25,.12)',
+          animation: 'modalIn .2s cubic-bezier(.4,0,.2,1)',
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.18)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 14,
+        }}>
+          <AlertTriangle size={20} color="var(--red)" />
+        </div>
+
+        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--tx)', marginBottom: 6, letterSpacing: '-.02em' }}>
+          Excluir lançamento?
+        </p>
+        <p style={{ fontSize: '.85rem', color: 'var(--tx-2)', lineHeight: 1.5, marginBottom: 4 }}>
+          <strong>{tx.description}</strong>
+        </p>
+        <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', marginBottom: isParentInstallment ? 16 : 20 }}>
+          {formatCurrency(tx.amount)} · {tx.category} · {tx.date}
+        </p>
+
+        {/* Installment warning */}
+        {isParentInstallment && (
+          <div style={{
+            background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.2)',
+            borderRadius: 10, padding: '10px 12px', marginBottom: 20,
+            fontSize: '.78rem', color: 'var(--tx-2)', lineHeight: 1.5,
+          }}>
+            <strong style={{ color: 'var(--a)' }}>Parcelamento detectado ({tx.total_installments}x)</strong><br />
+            Escolha se quer excluir apenas este mês ou todas as parcelas futuras.
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {isParentInstallment ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={onConfirmSingle}
+              style={{
+                width: '100%', padding: '11px', borderRadius: 10,
+                background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)',
+                color: 'var(--red)', fontWeight: 600, fontSize: '.875rem',
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'background .15s',
+              }}
+            >
+              Excluir apenas este mês
+            </button>
+            <button
+              onClick={onConfirmAll}
+              style={{
+                width: '100%', padding: '11px', borderRadius: 10,
+                background: 'var(--red)', border: 'none',
+                color: '#fff', fontWeight: 600, fontSize: '.875rem',
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity .15s',
+              }}
+            >
+              Excluir todos os meses ({tx.total_installments}x)
+            </button>
+            <button
+              onClick={onCancel}
+              style={{
+                width: '100%', padding: '11px', borderRadius: 10,
+                background: 'none', border: '1px solid var(--bd-2)',
+                color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={onCancel}
+              style={{
+                flex: 1, padding: '11px', borderRadius: 10,
+                background: 'none', border: '1px solid var(--bd-2)',
+                color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirmSingle}
+              style={{
+                flex: 1, padding: '11px', borderRadius: 10,
+                background: 'var(--red)', border: 'none',
+                color: '#fff', fontWeight: 600, fontSize: '.875rem',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Excluir
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 export default function ExtratoPage() {
   const [month, setMonth] = useState(() => {
-    // Sync with dashboard month via URL param (?month=YYYY-MM)
     if (typeof window !== 'undefined') {
       const m = new URLSearchParams(window.location.search).get('month');
       if (m && /^\d{4}-\d{2}$/.test(m)) return m;
@@ -37,6 +175,7 @@ export default function ExtratoPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -52,7 +191,6 @@ export default function ExtratoPage() {
     if (userId) loadTx(userId, month);
   }, [month, userId]);
 
-  // Re-fetch when a transaction is saved anywhere in the app
   useEffect(() => {
     if (!userId) return;
     return onRefresh(() => loadTx(userId, month));
@@ -65,10 +203,16 @@ export default function ExtratoPage() {
     setLoading(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Excluir este lançamento?')) return;
-    await deleteTransaction(id);
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  async function handleDeleteSingle(tx: Transaction) {
+    setPendingDelete(null);
+    await deleteTransaction(tx.id);
+    setTransactions(prev => prev.filter(t => t.id !== tx.id));
+  }
+
+  async function handleDeleteAll(tx: Transaction) {
+    setPendingDelete(null);
+    await deleteTransactionAll(tx.id);
+    setTransactions(prev => prev.filter(t => t.id !== tx.id && t.parent_id !== tx.id));
   }
 
   const currentMonth = getCurrentMonth();
@@ -81,10 +225,9 @@ export default function ExtratoPage() {
       if (payFilter === 'card')  return !!t.card_id;
       return true;
     });
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
-  // Group by date
   const grouped = filtered.reduce<Record<string, Transaction[]>>((acc, t) => {
     (acc[t.date] = acc[t.date] || []).push(t);
     return acc;
@@ -95,7 +238,18 @@ export default function ExtratoPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
-      {/* Header */}
+
+      {/* Delete confirmation */}
+      {pendingDelete && (
+        <DeleteConfirm
+          tx={pendingDelete}
+          onCancel={() => setPendingDelete(null)}
+          onConfirmSingle={() => handleDeleteSingle(pendingDelete)}
+          onConfirmAll={() => handleDeleteAll(pendingDelete)}
+        />
+      )}
+
+      {/* Sticky header */}
       <div className="page-sticky-head" style={{
         paddingBottom: 16,
         borderBottom: '1px solid var(--bd)',
@@ -104,7 +258,7 @@ export default function ExtratoPage() {
         backdropFilter: 'blur(12px)',
       }}>
         <span className="eyebrow" style={{ display: 'block', marginBottom: 10 }}>Extrato</span>
-        {/* Month picker */}
+
         <select
           className="input"
           value={month}
@@ -114,7 +268,7 @@ export default function ExtratoPage() {
           {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
 
-        {/* Summary pills — carousel on mobile, 3-col on desktop */}
+        {/* Summary pills */}
         <div className="summary-pills">
           {[
             { label: 'Entradas', value: totalIncome,  color: 'var(--green)' },
@@ -137,12 +291,11 @@ export default function ExtratoPage() {
 
         {/* Filters */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {/* Type filter */}
           <div style={{ display: 'flex', gap: 8 }}>
             {(['all', 'income', 'expense'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)} style={{
                 padding: '4px 12px', borderRadius: 99, fontSize: '.75rem', fontWeight: 500,
-                border: '1px solid var(--bd-2)', cursor: 'pointer',
+                border: '1px solid', cursor: 'pointer',
                 background: filter === f ? 'var(--a)' : 'var(--sf)',
                 color: filter === f ? '#fff' : 'var(--tx-3)',
                 borderColor: filter === f ? 'var(--a)' : 'var(--bd-2)',
@@ -151,12 +304,11 @@ export default function ExtratoPage() {
               </button>
             ))}
           </div>
-          {/* Payment method filter */}
           <div style={{ display: 'flex', gap: 8 }}>
             {(['all', 'debit', 'card'] as const).map(f => (
               <button key={f} onClick={() => setPayFilter(f)} style={{
                 padding: '4px 12px', borderRadius: 99, fontSize: '.75rem', fontWeight: 500,
-                border: '1px solid var(--bd-2)', cursor: 'pointer',
+                border: '1px solid', cursor: 'pointer',
                 background: payFilter === f ? 'var(--tx-2)' : 'var(--sf)',
                 color: payFilter === f ? '#fff' : 'var(--tx-3)',
                 borderColor: payFilter === f ? 'var(--tx-2)' : 'var(--bd-2)',
@@ -168,7 +320,7 @@ export default function ExtratoPage() {
         </div>
       </div>
 
-      {/* ── Gastos fixos (recorrentes) ── */}
+      {/* Gastos fixos */}
       {userId && (
         <div className="page-section" style={{ paddingTop: 24, paddingBottom: 0 }}>
           <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
@@ -178,12 +330,10 @@ export default function ExtratoPage() {
       {/* Transaction list */}
       <div className="page-section" style={{ paddingTop: 16, paddingBottom: 0 }}>
 
-        {/* Empty state */}
         {sortedDates.length === 0 && (
           <div style={{
             background: 'linear-gradient(135deg, var(--a-pale) 0%, var(--bg) 100%)',
-            borderRadius: 16, padding: '40px 24px', textAlign: 'center',
-            marginTop: 8,
+            borderRadius: 16, padding: '40px 24px', textAlign: 'center', marginTop: 8,
           }}>
             <div style={{
               width: 48, height: 48, borderRadius: 14,
@@ -198,15 +348,14 @@ export default function ExtratoPage() {
             </p>
             <p style={{ fontSize: '.78rem', color: 'var(--tx-3)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
               {isFutureMonth
-                ? 'Os gastos fixos acima refletem a projeção para este mês. Lance transações para acompanhar o realizado.'
-                : 'Nenhuma movimentação registrada neste período. Tente outro mês ou ajuste os filtros.'}
+                ? 'Os gastos fixos acima refletem a projeção. Lance transações para acompanhar o realizado.'
+                : 'Nenhuma movimentação registrada. Tente outro mês ou ajuste os filtros.'}
             </p>
           </div>
         )}
 
         {sortedDates.map(date => (
           <div key={date}>
-            {/* Day header */}
             <div style={{
               padding: '16px 0 8px',
               fontFamily: "'Geist Mono',monospace",
@@ -253,27 +402,25 @@ export default function ExtratoPage() {
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     <button
                       onClick={() => openForEdit(tx)}
-                      title="Editar lançamento"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
                         borderRadius: 99, padding: '4px 10px', cursor: 'pointer',
                         color: 'var(--a)', fontSize: '.7rem', fontWeight: 500,
-                        fontFamily: 'inherit', transition: 'background .15s',
+                        fontFamily: 'inherit',
                       }}
                     >
                       <Pencil size={10} strokeWidth={2.5} />
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(tx.id)}
-                      title="Excluir lançamento"
+                      onClick={() => setPendingDelete(tx)}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.18)',
                         borderRadius: 99, padding: '4px 10px', cursor: 'pointer',
                         color: 'var(--red)', fontSize: '.7rem', fontWeight: 500,
-                        fontFamily: 'inherit', transition: 'background .15s',
+                        fontFamily: 'inherit',
                       }}
                     >
                       <Trash2 size={10} strokeWidth={2.5} />

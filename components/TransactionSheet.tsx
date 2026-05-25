@@ -135,13 +135,12 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
     ? {
         background: 'var(--sf)',
         borderRadius: 16,
-        padding: '28px 28px 32px',
+        padding: '20px 24px 24px',
         width: '100%',
-        maxWidth: 480,
+        maxWidth: 460,
         boxShadow: '0 24px 80px rgba(14,18,25,.18), 0 8px 32px rgba(14,18,25,.12)',
         animation: 'modalIn .2s cubic-bezier(.4,0,.2,1)',
-        maxHeight: '90vh',
-        overflowY: 'auto',
+        // No scroll on desktop — form is designed to fit without it
       }
     : {
         background: 'var(--sf)',
@@ -180,7 +179,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
         )}
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           {isEditing ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--a-dim)', borderRadius: 8, padding: '6px 12px' }}>
               <Pencil size={12} color="var(--a)" />
@@ -197,7 +196,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
           </button>
         </div>
 
-        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.02em', marginBottom: 16 }}>
+        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.02em', marginBottom: 12 }}>
           {isEditing ? 'Editar lançamento' : 'Novo lançamento'}
         </p>
 
@@ -248,7 +247,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
 
         {/* Form */}
         {(mode === 'form' || isEditing) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {(['expense', 'income'] as TxType[]).map(t => (
                 <button key={t} onClick={() => setType(t)} style={{
@@ -264,28 +263,33 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
               ))}
             </div>
             <div>
-              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Valor (R$)</label>
+              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Valor (R$)</label>
               <input className="input" type="number" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} autoFocus={isDesktop} />
             </div>
             <div>
-              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Descrição</label>
+              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Descrição</label>
               <input className="input" placeholder="Ex: Mercado, Salário..." value={description} onChange={e => setDescription(e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Categoria</label>
+              <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Categoria</label>
               <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
                 <option value="">Selecionar...</option>
                 {CATEGORIES[type].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isEditing ? '1fr' : '1fr 1fr', gap: 8 }}>
+            {/* Date + Installments: 2-col only when both are visible */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: (!isEditing && type === 'expense') ? '1fr 1fr' : '1fr',
+              gap: 8,
+            }}>
               <div>
-                <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Data</label>
+                <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Data</label>
                 <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} />
               </div>
               {!isEditing && type === 'expense' && (
                 <div>
-                  <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Parcelas</label>
+                  <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Parcelas</label>
                   <select className="input" value={installments} onChange={e => setInstallments(Number(e.target.value))}>
                     {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
                       <option key={n} value={n}>{n === 1 ? 'À vista' : `${n}x`}</option>
@@ -296,7 +300,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
             </div>
             {type === 'expense' && cards.length > 0 && (
               <div>
-                <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 5 }}>Cartão (opcional)</label>
+                <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Cartão (opcional)</label>
                 <select className="input" value={cardId} onChange={e => setCardId(e.target.value)}>
                   <option value="">Débito / dinheiro</option>
                   {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
