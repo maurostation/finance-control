@@ -121,30 +121,35 @@ export default function ExtratoPage() {
         </div>
 
         {/* Filters */}
-        <div style={{ display:'flex', gap:6, marginTop:10, flexWrap:'wrap' }}>
-          {(['all','income','expense'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
-              border:'1px solid var(--bd-2)', cursor:'pointer',
-              background: filter===f ? 'var(--a)' : 'var(--sf)',
-              color: filter===f ? '#fff' : 'var(--tx-3)',
-              borderColor: filter===f ? 'var(--a)' : 'var(--bd-2)',
-            }}>
-              {f === 'all' ? 'Todos' : f === 'income' ? 'Entradas' : 'Saídas'}
-            </button>
-          ))}
-          <div style={{ width:1, background:'var(--bd-2)', margin:'0 2px' }} />
-          {(['all','debit','card'] as const).map(f => (
-            <button key={f} onClick={() => setPayFilter(f)} style={{
-              padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
-              border:'1px solid var(--bd-2)', cursor:'pointer',
-              background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
-              color: payFilter===f ? '#fff' : 'var(--tx-3)',
-              borderColor: payFilter===f ? 'var(--tx-2)' : 'var(--bd-2)',
-            }}>
-              {f === 'all' ? 'Forma' : f === 'debit' ? 'Débito' : 'Cartão'}
-            </button>
-          ))}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginTop:10, flexWrap:'wrap' }}>
+          {/* Type filter */}
+          <div style={{ display:'flex', gap:5 }}>
+            {(['all','income','expense'] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{
+                padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
+                border:'1px solid var(--bd-2)', cursor:'pointer',
+                background: filter===f ? 'var(--a)' : 'var(--sf)',
+                color: filter===f ? '#fff' : 'var(--tx-3)',
+                borderColor: filter===f ? 'var(--a)' : 'var(--bd-2)',
+              }}>
+                {f === 'all' ? 'Todos' : f === 'income' ? 'Entradas' : 'Saídas'}
+              </button>
+            ))}
+          </div>
+          {/* Payment method filter — right-aligned */}
+          <div style={{ display:'flex', gap:5 }}>
+            {(['all','debit','card'] as const).map(f => (
+              <button key={f} onClick={() => setPayFilter(f)} style={{
+                padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
+                border:'1px solid var(--bd-2)', cursor:'pointer',
+                background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
+                color: payFilter===f ? '#fff' : 'var(--tx-3)',
+                borderColor: payFilter===f ? 'var(--tx-2)' : 'var(--bd-2)',
+              }}>
+                {f === 'all' ? 'Pagamento' : f === 'debit' ? 'Débito' : 'Cartão'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
