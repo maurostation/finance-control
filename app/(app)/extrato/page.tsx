@@ -251,7 +251,7 @@ export default function ExtratoPage() {
   if (loading) return <ExtratoSkeleton />;
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
+    <div>
 
       {/* Delete confirmation — z-index 2000, no backdropFilter to avoid compositing conflicts */}
       {pendingDelete && (
@@ -263,12 +263,11 @@ export default function ExtratoPage() {
         />
       )}
 
-      {/* Sticky header — NO backdropFilter (causes modal to appear behind on Safari/WebKit) */}
+      {/* Hero — full width, not sticky */}
       <div className="page-sticky-head" style={{
         paddingBottom: 16,
         borderBottom: '1px solid var(--bd)',
-        background: 'var(--sf)',          // solid, not blurred — fixes z-index stacking
-        position: 'sticky', top: 0, zIndex: 10,
+        background: 'var(--sf)',
       }}>
         <span className="eyebrow" style={{ display: 'block', marginBottom: 10 }}>Extrato</span>
 
@@ -332,6 +331,8 @@ export default function ExtratoPage() {
           </div>
         </div>
       </div>
+      {/* ── Conteúdo centralizado abaixo do hero ─────────────────────────── */}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
 
       {/* Fatura do mês anterior — banner só aparece se ainda não foi lançada */}
       {showBillBanner && (
@@ -448,6 +449,7 @@ export default function ExtratoPage() {
           </div>
         ))}
       </div>
+      </div>{/* fim maxWidth 900 */}
     </div>
   );
 }

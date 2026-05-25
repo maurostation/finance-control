@@ -21,12 +21,16 @@ export async function getUser() {
 
 // Transactions
 export async function getTransactions(userId: string, month: string) {
+  const [y, m] = month.split('-').map(Number);
+  // Last day of the month — works for every month (28/29/30/31)
+  const lastDay = new Date(y, m, 0).getDate();
+  const lastDate = `${month}-${String(lastDay).padStart(2, '0')}`;
   return supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .gte('date', `${month}-01`)
-    .lte('date', `${month}-31`)
+    .lte('date', lastDate)
     .order('date', { ascending: false });
 }
 
