@@ -49,7 +49,7 @@ export default function CardWidget({ card, openBillAmount, onClick }: Props) {
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
           <span style={{ fontSize:'.85rem', fontWeight:600, color:'var(--tx)' }}>{card.name}</span>
           <span style={{ fontSize:'.9rem', fontWeight:700, color:'var(--tx)' }}>
-            {formatCurrency(openBillAmount)}
+            <span className="money">{formatCurrency(openBillAmount)}</span>
           </span>
         </div>
         <div className="progress-track" style={{ height:4, marginBottom:6 }}>

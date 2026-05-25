@@ -114,7 +114,7 @@ export default function ExtratoPage() {
                 {s.label}
               </p>
               <p style={{ fontSize:'.9rem', fontWeight:700, color:s.color, letterSpacing:'-.02em' }}>
-                {formatCurrency(s.value)}
+                <span className="money">{formatCurrency(s.value)}</span>
               </p>
             </div>
           ))}
@@ -202,7 +202,7 @@ export default function ExtratoPage() {
                     fontSize:'.9rem', fontWeight:600,
                     color: tx.type === 'income' ? 'var(--green)' : 'var(--tx)',
                   }}>
-                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    <span className="money">{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                   </p>
                   <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:4 }}>
                     <button

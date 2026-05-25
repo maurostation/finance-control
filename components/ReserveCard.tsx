@@ -45,7 +45,7 @@ export default function ReserveCard({ current, target, onDeposit, monthSurplus }
               Reserva de emergência
             </p>
             <p style={{ fontSize:'1.3rem', fontWeight:700, color:'var(--tx)', letterSpacing:'-.03em', lineHeight:1.1 }}>
-              {formatCurrency(current)}
+              <span className="money">{formatCurrency(current)}</span>
             </p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function ReserveCard({ current, target, onDeposit, monthSurplus }
             {pct.toFixed(0)}% da meta
           </span>
           <span style={{ fontSize:'.72rem', fontFamily:"'Geist Mono',monospace", color:'var(--tx-3)' }}>
-            meta: {formatCurrency(target)}
+            meta: <span className="money">{formatCurrency(target)}</span>
           </span>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function ReserveCard({ current, target, onDeposit, monthSurplus }
           display:'flex', justifyContent:'space-between', alignItems:'center',
         }}>
           <p style={{ fontSize:'.8rem', color:'var(--tx-2)' }}>
-            Sobrou <strong style={{ color:'var(--a)' }}>{formatCurrency(monthSurplus)}</strong> esse mês
+            Sobrou <strong style={{ color:'var(--a)' }}><span className="money">{formatCurrency(monthSurplus)}</span></strong> esse mês
           </p>
           <button
             className="btn-amber"

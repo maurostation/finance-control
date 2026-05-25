@@ -212,7 +212,7 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
 
               {/* Amount */}
               <span style={{ fontSize: '.9rem', fontWeight: 700, color: t.type === 'income' ? 'var(--green)' : 'var(--tx)', flexShrink: 0 }}>
-                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                <span className="money">{t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}</span>
               </span>
 
               {/* Action */}

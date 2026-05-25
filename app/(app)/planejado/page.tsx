@@ -87,7 +87,7 @@ export default function PlanejadoPage() {
               {p.name}
             </p>
             <span style={{ fontSize:'.95rem', fontWeight:700, color:'var(--tx)', flexShrink:0, marginLeft:8 }}>
-              {formatCurrency(p.estimated_value)}
+              <span className="money">{formatCurrency(p.estimated_value)}</span>
             </span>
           </div>
           <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
@@ -147,7 +147,7 @@ export default function PlanejadoPage() {
                 {s.label}
               </p>
               <p style={{ fontSize:'.9rem', fontWeight:700, color:s.color, letterSpacing:'-.02em' }}>
-                {formatCurrency(s.value)}
+                <span className="money">{formatCurrency(s.value)}</span>
               </p>
               <p style={{ fontSize:'.65rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>{s.count} item{s.count !== 1 ? 's' : ''}</p>
             </div>
@@ -184,8 +184,8 @@ export default function PlanejadoPage() {
                       {label}
                     </span>
                     <div style={{ display:'flex', gap:10 }}>
-                      {totalIn > 0 && <span style={{ fontSize:'.72rem', color:'var(--green)', fontWeight:600 }}>+{formatCurrency(totalIn)}</span>}
-                      {totalOut > 0 && <span style={{ fontSize:'.72rem', color:'var(--red)', fontWeight:600 }}>-{formatCurrency(totalOut)}</span>}
+                      {totalIn > 0 && <span style={{ fontSize:'.72rem', color:'var(--green)', fontWeight:600 }}><span className="money">+{formatCurrency(totalIn)}</span></span>}
+                      {totalOut > 0 && <span style={{ fontSize:'.72rem', color:'var(--red)', fontWeight:600 }}><span className="money">-{formatCurrency(totalOut)}</span></span>}
                     </div>
                   </div>
                   {/* Tx rows */}
@@ -213,7 +213,7 @@ export default function PlanejadoPage() {
                           </p>
                         </div>
                         <span style={{ fontSize:'.88rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
-                          {tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                          <span className="money">{tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                         </span>
                       </div>
                     ))}

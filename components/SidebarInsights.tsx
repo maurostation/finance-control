@@ -11,6 +11,7 @@ interface Insight {
   type: 'danger' | 'warning' | 'good';
   title: string;
   body: string;
+  amount?: number;
 }
 
 const STYLE: Record<string, { color: string; bg: string }> = {
@@ -57,7 +58,7 @@ export default function SidebarInsights({ userId }: { userId: string | null }) {
   if (budgetPct >= 90) insights.push({ type: 'danger', title: 'Orçamento crítico', body: `${budgetPct.toFixed(0)}% da renda gasto.` });
   if (weekDelta > 25)  insights.push({ type: 'warning', title: 'Semana mais cara', body: `↑${weekDelta.toFixed(0)}% vs anterior` });
   if (savings && savings.current_amount < savings.target_amount * 0.1) insights.push({ type: 'warning', title: 'Reserva muito baixa', body: `${((savings.current_amount / savings.target_amount) * 100).toFixed(0)}% da meta.` });
-  if (balance > 0 && budgetPct < 90) insights.push({ type: 'good', title: `Sobrou ${formatCurrency(balance)}`, body: 'Mova parte para a reserva.' });
+  if (balance > 0 && budgetPct < 90) insights.push({ type: 'good', title: 'Sobrou', body: 'Mova parte para a reserva.', amount: balance });
 
   async function handleAI() {
     setAiLoading(true);
@@ -122,7 +123,7 @@ export default function SidebarInsights({ userId }: { userId: string | null }) {
             padding: '8px 10px',
           }}>
             <p style={{ fontSize: '.75rem', fontWeight: 600, color: 'var(--tx)', lineHeight: 1.2, marginBottom: 2 }}>
-              {ins.title}
+              {ins.title}{ins.amount !== undefined ? <> <span className="money">{formatCurrency(ins.amount)}</span></> : null}
             </p>
             <p style={{ fontSize: '.7rem', color: 'var(--tx-3)', lineHeight: 1.4 }}>
               {ins.body}

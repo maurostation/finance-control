@@ -111,7 +111,7 @@ export default function DashboardPage() {
             <span className="eyebrow" style={{ marginBottom:10, display:'block' }}>{getCurrentMonthLabel()}</span>
             <p style={{ fontSize:'.85rem', color:'var(--tx-3)', marginBottom:6 }}>Disponível no mês</p>
             <p style={{ fontSize:'3rem', fontWeight:800, letterSpacing:'-.055em', color: balance >= 0 ? 'var(--tx)' : 'var(--red)', lineHeight:1 }}>
-              {formatCurrency(balance)}
+              <span className="money">{formatCurrency(balance)}</span>
             </p>
           </div>
 
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                   <Icon size={13} color={color} />
                   <span style={{ fontSize:'.72rem', color:'var(--tx-3)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em' }}>{label}</span>
                 </div>
-                <p style={{ fontSize:'1.3rem', fontWeight:700, color:'var(--tx)', letterSpacing:'-.03em' }}>{formatCurrency(value)}</p>
+                <p style={{ fontSize:'1.3rem', fontWeight:700, color:'var(--tx)', letterSpacing:'-.03em' }}><span className="money">{formatCurrency(value)}</span></p>
               </div>
             ))}
           </div>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             }}>
               <p style={{ fontSize: '.72rem', color: 'var(--tx-3)', marginBottom: 8 }}>{item.label}</p>
               <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.03em' }}>
-                {formatCurrency(item.value)}
+                <span className="money">{formatCurrency(item.value)}</span>
               </p>
               <p style={{ fontSize: '.7rem', fontFamily: "'Geist Mono',monospace", color: item.bad ? 'var(--red)' : 'var(--tx-4)', marginTop: 5 }}>
                 {item.sub}
@@ -280,7 +280,7 @@ export default function DashboardPage() {
                   <p style={{ fontSize:'.72rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
                 </div>
                 <span style={{ fontSize:'.92rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
-                  {tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                  <span className="money">{tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                 </span>
               </div>
             ))}

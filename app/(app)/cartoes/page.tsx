@@ -165,7 +165,7 @@ export default function CartoesPage() {
                       <span style={{ fontSize:'.84rem', fontWeight:600, color:'var(--tx)' }}>{card.name}</span>
                     </div>
                     <p style={{ fontSize:'1.5rem', fontWeight:700, color:'var(--tx)', letterSpacing:'-.04em' }}>
-                      {formatCurrency(bill)}
+                      <span className="money">{formatCurrency(bill)}</span>
                     </p>
                     <p style={{ fontSize:'.75rem', color:'var(--tx-3)', marginTop:4 }}>
                       fatura em aberto · fecha em {days} dia{days !== 1 ? 's' : ''}
@@ -174,7 +174,7 @@ export default function CartoesPage() {
                   <div style={{ textAlign:'right' }}>
                     {card.limit_amount > 0 && (
                       <span className="badge badge-gray" style={{ display:'block', marginBottom:4 }}>
-                        limite {formatCurrency(card.limit_amount)}
+                        limite <span className="money">{formatCurrency(card.limit_amount)}</span>
                       </span>
                     )}
                     <span className="badge badge-amber">
@@ -204,7 +204,7 @@ export default function CartoesPage() {
                         </div>
                       </div>
                       <span style={{ fontSize:'.88rem', fontWeight:600, color:'var(--tx)' }}>
-                        {formatCurrency(tx.amount)}
+                        <span className="money">{formatCurrency(tx.amount)}</span>
                       </span>
                     </div>
                   ))}
@@ -214,7 +214,7 @@ export default function CartoesPage() {
                     borderRadius:'0 0 12px 12px',
                   }}>
                     <span style={{ fontSize:'.78rem', fontWeight:600, color:'var(--tx-2)' }}>Total</span>
-                    <span style={{ fontSize:'.9rem', fontWeight:700, color:'var(--tx)' }}>{formatCurrency(bill)}</span>
+                    <span style={{ fontSize:'.9rem', fontWeight:700, color:'var(--tx)' }}><span className="money">{formatCurrency(bill)}</span></span>
                   </div>
                 </div>
               )}
