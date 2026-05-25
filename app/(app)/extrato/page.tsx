@@ -370,7 +370,7 @@ export default function ExtratoPage() {
       {/* Gastos fixos */}
       {userId && (
         <div className="page-section" style={{ paddingTop: 24, paddingBottom: 0 }}>
-          <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} />
+          <RecurringSection userId={userId} currentMonthTx={transactions} cards={cards} displayMonth={month} />
         </div>
       )}
 

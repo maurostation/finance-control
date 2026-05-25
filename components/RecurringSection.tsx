@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { RecurringTemplate, Card, Transaction, CATEGORIES } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getCurrentMonth } from '@/lib/utils';
 import {
   getRecurringTemplates,
   insertRecurringTemplate,
@@ -16,6 +16,7 @@ interface Props {
   userId: string;
   currentMonthTx: Transaction[];
   cards: Card[];
+  displayMonth: string; // "YYYY-MM" — mês sendo exibido
 }
 
 const chipBtn = (active: boolean): React.CSSProperties => ({
@@ -27,7 +28,7 @@ const chipBtn = (active: boolean): React.CSSProperties => ({
   transition: 'all .15s',
 });
 
-export default function RecurringSection({ userId, currentMonthTx, cards }: Props) {
+export default function RecurringSection({ userId, currentMonthTx, cards, displayMonth }: Props) {
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
@@ -47,21 +48,25 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
   }, [userId]);
 
   // Auto-launch any template not yet launched this month (runs once per mount)
+  // Só dispara se o mês exibido for o mês atual real — evita lançar em mês errado
+  // quando o usuário navega para outro mês e o componente remonta.
   useEffect(() => {
     if (autoLaunchedRef.current || !templates.length || !userId) return;
     autoLaunchedRef.current = true;
+
+    // Guarda: só auto-lança no mês corrente
+    if (displayMonth !== getCurrentMonth()) return;
 
     const notLaunched = templates.filter(
       t => !currentMonthTx.some(tx => tx.is_recurring && tx.description === t.description)
     );
     if (!notLaunched.length) return;
 
-    const now = new Date();
+    const [year, mo] = displayMonth.split('-').map(Number);
     Promise.all(notLaunched.map(async t => {
-      const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const maxDay = new Date(year, mo, 0).getDate();
       const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const date = `${now.getFullYear()}-${month}-${day}`;
+      const date = `${year}-${String(mo).padStart(2, '0')}-${day}`;
       await insertTransaction({
         user_id: userId,
         description: t.description,
@@ -84,11 +89,10 @@ export default function RecurringSection({ userId, currentMonthTx, cards }: Prop
 
   async function handleLaunch(t: RecurringTemplate) {
     setLaunching(t.id);
-    const now = new Date();
-    const maxDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const [year, mo] = displayMonth.split('-').map(Number);
+    const maxDay = new Date(year, mo, 0).getDate();
     const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const date = `${now.getFullYear()}-${month}-${day}`;
+    const date = `${year}-${String(mo).padStart(2, '0')}-${day}`;
     await insertTransaction({
       user_id: userId,
       description: t.description,
