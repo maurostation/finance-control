@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { RecurringTemplate, Card, Transaction, CATEGORIES } from '@/lib/types';
-import { formatCurrency, getCurrentMonth } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import {
   getRecurringTemplates,
   insertRecurringTemplate,
@@ -32,7 +32,7 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
-  const autoLaunchedRef = useRef(false);
+  const [launchingAll, setLaunchingAll] = useState(false);
 
   // Form state
   const [rType, setRType] = useState<'expense' | 'income'>('expense');
@@ -47,52 +47,42 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
     getRecurringTemplates(userId).then(({ data }) => setTemplates(data || []));
   }, [userId]);
 
-  // Auto-launch any template not yet launched this month (runs once per mount)
-  // Só dispara se o mês exibido for o mês atual real — evita lançar em mês errado
-  // quando o usuário navega para outro mês e o componente remonta.
-  useEffect(() => {
-    if (autoLaunchedRef.current || !templates.length || !userId) return;
-    autoLaunchedRef.current = true;
-
-    // Guarda: só auto-lança no mês corrente
-    if (displayMonth !== getCurrentMonth()) return;
-
-    const notLaunched = templates.filter(
-      t => !currentMonthTx.some(tx => tx.is_recurring && tx.description === t.description)
-    );
-    if (!notLaunched.length) return;
-
+  // Calcula a data de lançamento para o mês exibido
+  function buildDate(t: RecurringTemplate): string {
     const [year, mo] = displayMonth.split('-').map(Number);
-    Promise.all(notLaunched.map(async t => {
-      const maxDay = new Date(year, mo, 0).getDate();
-      const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
-      const date = `${year}-${String(mo).padStart(2, '0')}-${day}`;
-      await insertTransaction({
-        user_id: userId,
-        description: t.description,
-        amount: t.amount,
-        type: t.type,
-        category: t.category,
-        card_id: t.card_id || null,
-        date,
-        is_recurring: true,
-        is_installment: false,
-      });
-    })).then(() => broadcastRefresh());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templates]);
+    const maxDay = new Date(year, mo, 0).getDate();
+    const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
+    return `${year}-${String(mo).padStart(2, '0')}-${day}`;
+  }
 
-  // A template is considered "launched" this month if there's a is_recurring tx with same description
+  const notLaunched = templates.filter(
+    t => !currentMonthTx.some(tx => tx.is_recurring && tx.description === t.description)
+  );
+
+  async function handleLaunchAll() {
+    if (!notLaunched.length) return;
+    setLaunchingAll(true);
+    await Promise.all(notLaunched.map(t => insertTransaction({
+      user_id: userId,
+      description: t.description,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      card_id: t.card_id || null,
+      date: buildDate(t),
+      is_recurring: true,
+      is_installment: false,
+    })));
+    broadcastRefresh();
+    setLaunchingAll(false);
+  }
+
   function isLaunched(t: RecurringTemplate) {
     return currentMonthTx.some(tx => tx.is_recurring && tx.description === t.description);
   }
 
   async function handleLaunch(t: RecurringTemplate) {
     setLaunching(t.id);
-    const [year, mo] = displayMonth.split('-').map(Number);
-    const maxDay = new Date(year, mo, 0).getDate();
-    const day = String(Math.min(t.day_of_month, maxDay)).padStart(2, '0');
-    const date = `${year}-${String(mo).padStart(2, '0')}-${day}`;
     await insertTransaction({
       user_id: userId,
       description: t.description,
@@ -100,7 +90,7 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
       type: t.type,
       category: t.category,
       card_id: t.card_id || null,
-      date,
+      date: buildDate(t),
       is_recurring: true,
       is_installment: false,
     });
@@ -138,13 +128,29 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
         <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Repeat size={11} color="var(--a)" /> Gastos fixos
         </span>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="btn-ghost"
-          style={{ fontSize: '.75rem', padding: '.3rem .8rem', gap: 4 }}
-        >
-          <Plus size={12} /> Adicionar
-        </button>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {notLaunched.length > 1 && (
+            <button
+              onClick={handleLaunchAll}
+              disabled={launchingAll}
+              style={{
+                background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
+                borderRadius: 7, padding: '4px 10px', cursor: 'pointer',
+                fontSize: '.72rem', fontWeight: 600, color: 'var(--a)',
+                opacity: launchingAll ? .5 : 1,
+              }}
+            >
+              {launchingAll ? '...' : `Lançar todos (${notLaunched.length})`}
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="btn-ghost"
+            style={{ fontSize: '.75rem', padding: '.3rem .8rem', gap: 4 }}
+          >
+            <Plus size={12} /> Adicionar
+          </button>
+        </div>
       </div>
 
       <div style={{
