@@ -26,3 +26,26 @@ export function onOpenEdit(callback: (tx: Transaction) => void) {
   window.addEventListener('finance-open-edit', handler);
   return () => window.removeEventListener('finance-open-edit', handler);
 }
+
+// ── Values hidden sync ──────────────────────────────────────────────────────
+// Any component can request a toggle; layout is the single source of truth.
+export function requestValuesToggle() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('fc-request-values-toggle'));
+  }
+}
+export function onRequestValuesToggle(cb: () => void) {
+  window.addEventListener('fc-request-values-toggle', cb);
+  return () => window.removeEventListener('fc-request-values-toggle', cb);
+}
+// Layout broadcasts the current state after every toggle.
+export function broadcastValuesState(hidden: boolean) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('fc-values-state', { detail: hidden }));
+  }
+}
+export function onValuesState(cb: (hidden: boolean) => void) {
+  const h = (e: Event) => cb((e as CustomEvent<boolean>).detail);
+  window.addEventListener('fc-values-state', h);
+  return () => window.removeEventListener('fc-values-state', h);
+}

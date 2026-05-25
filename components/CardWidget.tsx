@@ -23,9 +23,9 @@ export default function CardWidget({ card, openBillAmount, onClick }: Props) {
       background:'var(--sf)',
       borderRadius:12, padding:'14px 16px',
       display:'flex', alignItems:'center', gap:12,
-      cursor:'pointer', textAlign:'left', width:'100%',
+      cursor:'pointer', textAlign:'left', width:'100%', height:'100%',
       border: 'none',
-      boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
+      boxShadow: '0 2px 8px rgba(14,18,25,.08), 0 4px 20px rgba(14,18,25,.06)',
       transition:'box-shadow .2s, transform .15s',
     }}
     onMouseEnter={e => {

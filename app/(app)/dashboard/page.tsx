@@ -7,9 +7,9 @@ import { formatCurrency, getCurrentMonth, getCurrentMonthLabel, getProgressClass
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
 import RecurringSection from '@/components/RecurringSection';
-import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle, CalendarClock } from 'lucide-react';
+import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle, CalendarClock, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { onRefresh } from '@/lib/refresh';
+import { onRefresh, requestValuesToggle, onValuesState } from '@/lib/refresh';
 import { DashboardSkeleton } from '@/components/Skeleton';
 
 export default function DashboardPage() {
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
+  const [heroHidden, setHeroHidden] = useState(false);
 
   async function loadData(uid: string) {
     setLoading(true);
@@ -52,6 +53,12 @@ export default function DashboardPage() {
     if (!userId) return;
     return onRefresh(() => loadData(userId));
   }, [userId]);
+
+  // Sync hero eye button with the layout's values-hidden state
+  useEffect(() => {
+    try { setHeroHidden(localStorage.getItem('fc-values-hidden') === 'true'); } catch {}
+    return onValuesState(h => setHeroHidden(h));
+  }, []);
 
   const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
@@ -99,7 +106,8 @@ export default function DashboardPage() {
         padding: '28px 32px',
         marginBottom: 24,
         position: 'relative', overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(14,18,25,.05), 0 8px 32px rgba(14,18,25,.04)',
+        border: '1px solid var(--bd-2)',
+        boxShadow: '0 2px 12px rgba(14,18,25,.07), 0 8px 32px rgba(14,18,25,.05)',
       }}>
         {/* Subtle grid */}
         <div style={{
@@ -113,9 +121,20 @@ export default function DashboardPage() {
           <div>
             <span className="eyebrow" style={{ marginBottom:10, display:'block' }}>{getCurrentMonthLabel()}</span>
             <p style={{ fontSize:'.85rem', color:'var(--tx-3)', marginBottom:6 }}>Disponível no mês</p>
-            <p style={{ fontSize:'3rem', fontWeight:800, letterSpacing:'-.055em', color: balance >= 0 ? 'var(--tx)' : 'var(--red)', lineHeight:1 }}>
-              <span className="money">{formatCurrency(balance)}</span>
-            </p>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <p style={{ fontSize:'3rem', fontWeight:800, letterSpacing:'-.055em', color: balance >= 0 ? 'var(--tx)' : 'var(--red)', lineHeight:1 }}>
+                <span className="money">{formatCurrency(balance)}</span>
+              </p>
+              {/* Desktop-only eye toggle — near the main number */}
+              <button
+                className="hero-eye-btn"
+                onClick={requestValuesToggle}
+                title={heroHidden ? 'Mostrar valores' : 'Ocultar valores'}
+              >
+                {heroHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                <span>{heroHidden ? 'Mostrar' : 'Ocultar'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats row */}

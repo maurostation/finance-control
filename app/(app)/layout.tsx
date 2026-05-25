@@ -9,7 +9,7 @@ import SidebarInsights from '@/components/SidebarInsights';
 import FinanceTicker from '@/components/FinanceTicker';
 import { supabase, getCards, insertTransaction, updateTransaction } from '@/lib/supabase';
 import { Card, Transaction } from '@/lib/types';
-import { broadcastRefresh, onOpenEdit } from '@/lib/refresh';
+import { broadcastRefresh, onOpenEdit, broadcastValuesState, onRequestValuesToggle } from '@/lib/refresh';
 import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Banknote, Eye, EyeOff } from 'lucide-react';
 
 const NAV_LINKS = [
@@ -162,9 +162,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setValuesHidden(v => {
       const next = !v;
       try { localStorage.setItem('fc-values-hidden', next.toString()); } catch {}
+      broadcastValuesState(next);
       return next;
     });
   }, []);
+
+  // Listen for toggle requests from components outside the sidebar (e.g. hero button)
+  useEffect(() => {
+    return onRequestValuesToggle(toggleValues);
+  }, [toggleValues]);
 
   // ── Listen for edit-transaction events dispatched by extrato ──
   useEffect(() => {

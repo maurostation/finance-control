@@ -318,18 +318,22 @@ select.input {
 @media (min-width: 768px) {
   .week-and-cards {
     grid-template-columns: 1fr 1fr 1.6fr;
-    align-items: start;
+    align-items: stretch; /* all cells same height as tallest */
   }
   .cards-col {
     grid-column: auto;
+    display: flex;
+    flex-direction: column;
   }
   .cards-carousel {
     flex-direction: column;
     overflow-x: visible;
     scroll-snap-type: none;
+    flex: 1; /* fill the column height */
   }
   .cards-carousel > * {
     width: auto;
+    flex: 1; /* card stretches to fill column */
   }
 }
 
@@ -343,6 +347,40 @@ select.input {
   opacity: .5;
   user-select: none;
   pointer-events: none;
+}
+
+/* Hero eye button — desktop only, near the main balance number */
+.hero-eye-btn {
+  display: none;
+}
+@media (min-width: 768px) {
+  .hero-eye-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--bd-2);
+    border-radius: 99px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--tx-3);
+    font-size: .72rem;
+    font-weight: 500;
+    font-family: inherit;
+    transition: border-color .15s, color .15s;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .hero-eye-btn:hover {
+    border-color: var(--a-bd);
+    color: var(--a);
+  }
+  .values-hidden .hero-eye-btn {
+    background: var(--a-dim);
+    border-color: var(--a-bd);
+    color: var(--a);
+  }
 }
 
 /* Mobile eye button */
