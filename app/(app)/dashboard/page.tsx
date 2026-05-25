@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, getTransactions, getCards, getPlannedPurchases, getSavings, updateSavings, getFutureTransactions } from '@/lib/supabase';
-import { Transaction, Card, PlannedPurchase, SavingsGoal } from '@/lib/types';
+import { supabase, getTransactions, getCards, getPlannedPurchases, getSavings, updateSavings, getFutureTransactions, getRecurringTemplates } from '@/lib/supabase';
+import { Transaction, Card, PlannedPurchase, SavingsGoal, RecurringTemplate } from '@/lib/types';
 import { formatCurrency, getCurrentMonth, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
@@ -21,31 +21,46 @@ function fmtMonth(m: string): string {
   return l.charAt(0).toUpperCase() + l.slice(1);
 }
 
-export default function DashboardPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [cards, setCards]               = useState<Card[]>([]);
-  const [purchases, setPurchases]       = useState<PlannedPurchase[]>([]);
-  const [savings, setSavings]           = useState<SavingsGoal | null>(null);
-  const [futureTx, setFutureTx]         = useState<Transaction[]>([]);
-  const [userId, setUserId]             = useState<string | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [payFilter, setPayFilter]       = useState<'all' | 'debit' | 'card'>('all');
-  const [heroHidden, setHeroHidden]     = useState(false);
-  const [futureMonth, setFutureMonth]   = useState('');
-  const [heroMonth, setHeroMonth]       = useState(getCurrentMonth);
+/** Returns next month if we're in the last 6 days of the current month,
+ *  so the app "starts" in the upcoming month during the month-end transition. */
+function getDefaultHeroMonth(): string {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  if (daysInMonth - now.getDate() < 7) {
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return next.toISOString().slice(0, 7);
+  }
+  return getCurrentMonth();
+}
 
-  // ── Load static data (cards, purchases, savings, future tx) ────────────────
+export default function DashboardPage() {
+  const [transactions, setTransactions]       = useState<Transaction[]>([]);
+  const [cards, setCards]                     = useState<Card[]>([]);
+  const [purchases, setPurchases]             = useState<PlannedPurchase[]>([]);
+  const [savings, setSavings]                 = useState<SavingsGoal | null>(null);
+  const [futureTx, setFutureTx]               = useState<Transaction[]>([]);
+  const [recurringTemplates, setRecurring]    = useState<RecurringTemplate[]>([]);
+  const [userId, setUserId]                   = useState<string | null>(null);
+  const [loading, setLoading]                 = useState(true);
+  const [payFilter, setPayFilter]             = useState<'all' | 'debit' | 'card'>('all');
+  const [heroHidden, setHeroHidden]           = useState(false);
+  const [futureMonth, setFutureMonth]         = useState('');
+  const [heroMonth, setHeroMonth]             = useState(getDefaultHeroMonth);
+
+  // ── Load static data (cards, purchases, savings, future tx, recurring) ─────
   async function loadStaticData(uid: string) {
-    const [cardsRes, purchasesRes, savingsRes, futureRes] = await Promise.all([
+    const [cardsRes, purchasesRes, savingsRes, futureRes, recurringRes] = await Promise.all([
       getCards(uid),
       getPlannedPurchases(uid),
       getSavings(uid),
       getFutureTransactions(uid),
+      getRecurringTemplates(uid),
     ]);
     setCards(cardsRes.data || []);
     setPurchases(purchasesRes.data || []);
     setSavings(savingsRes.data || null);
     setFutureTx(futureRes.data || []);
+    setRecurring(recurringRes.data || []);
   }
 
   // ── Load transactions for a specific month ─────────────────────────────────
@@ -59,11 +74,11 @@ export default function DashboardPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
-      const cur = getCurrentMonth();
-      setHeroMonth(cur);
+      const defaultMonth = getDefaultHeroMonth();
+      setHeroMonth(defaultMonth);
       await Promise.all([
         loadStaticData(user.id),
-        loadMonthTx(user.id, cur),
+        loadMonthTx(user.id, defaultMonth),
       ]);
       setLoading(false);
     });
@@ -121,13 +136,22 @@ export default function DashboardPage() {
   const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
+  // Future months: project balance from recurring templates (no actual transactions yet)
+  const isFutureMonth = heroMonth > currentMonth;
+  const projectedIncome  = recurringTemplates.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const projectedExpense = recurringTemplates.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
   // Credit card deferred: card expenses from current month go to next month's bill
   const cardExpense = isCurrentMonth
     ? transactions.filter(t => !!t.card_id && t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     : 0;
   const debitExpense = totalExpense - cardExpense;
-  const balance      = totalIncome - debitExpense;
-  const budgetPct    = totalIncome > 0 ? Math.min((debitExpense / totalIncome) * 100, 100) : 0;
+
+  // What to display in hero depends on which month we're viewing
+  const displayIncome  = isFutureMonth ? projectedIncome  : totalIncome;
+  const displayExpense = isFutureMonth ? projectedExpense : debitExpense;
+  const balance        = displayIncome - displayExpense;
+  const budgetPct      = displayIncome > 0 ? Math.min((displayExpense / displayIncome) * 100, 100) : 0;
 
   const now = new Date();
   const thisWeekStart = new Date(now); thisWeekStart.setDate(now.getDate() - now.getDay());
@@ -212,7 +236,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', marginBottom: 4 }}>
-                {isCurrentMonth ? 'Disponível este mês' : 'Saldo realizado'}
+                {isFutureMonth ? 'Projeção — gastos fixos' : isCurrentMonth ? 'Disponível este mês' : 'Saldo realizado'}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <p className="hero-balance" style={{ color: balance >= 0 ? 'var(--tx)' : 'var(--red)' }}>
@@ -241,8 +265,8 @@ export default function DashboardPage() {
             {/* Income / Expense stats */}
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               {[
-                { label: 'Entradas', value: totalIncome,  color: 'var(--green)', Icon: TrendingUp  },
-                { label: 'Saídas',   value: debitExpense, color: 'var(--red)',   Icon: TrendingDown },
+                { label: isFutureMonth ? 'Entradas fixas' : 'Entradas', value: displayIncome,  color: 'var(--green)', Icon: TrendingUp  },
+                { label: isFutureMonth ? 'Saídas fixas'   : 'Saídas',   value: displayExpense, color: 'var(--red)',   Icon: TrendingDown },
               ].map(({ label, value, color, Icon }) => (
                 <div key={label}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
@@ -263,15 +287,16 @@ export default function DashboardPage() {
               <div className={`progress-fill ${getProgressClass(budgetPct)}`} style={{ width: `${budgetPct}%` }} />
             </div>
             <p style={{ marginTop: 5, fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)' }}>
-              {budgetPct.toFixed(0)}% da renda utilizada
-              {isCurrentMonth && cardExpense > 0 && ' (excl. fatura)'}
+              {isFutureMonth
+                ? `${budgetPct.toFixed(0)}% comprometido — ${recurringTemplates.length} lançamento${recurringTemplates.length !== 1 ? 's' : ''} fixo${recurringTemplates.length !== 1 ? 's' : ''}`
+                : `${budgetPct.toFixed(0)}% da renda utilizada${isCurrentMonth && cardExpense > 0 ? ' (excl. fatura)' : ''}`}
             </p>
           </div>
         </div>
       </div>
 
       {/* ── Main content ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginTop: 24 }}>
 
         {/* Urgent purchases alert */}
         {highPriority.length > 0 && (
@@ -301,7 +326,7 @@ export default function DashboardPage() {
             { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
           ].map(item => (
             <div key={item.label} style={{
-              background: 'var(--sf)', borderRadius: 14, padding: '16px 20px',
+              background: 'var(--sf)', borderRadius: 16, padding: '20px 24px',
               boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
             }}>
               <p style={{ fontSize: '.72rem', color: 'var(--tx-3)', marginBottom: 8 }}>{item.label}</p>
