@@ -426,16 +426,16 @@ export default function DashboardPage() {
 
                 {selectedTxs.length > 0 ? (
                   <>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                       {inc > 0 && (
-                        <div style={{ flex: 1, background: 'rgba(16,185,129,.06)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(16,185,129,.12)' }}>
-                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Entradas</p>
+                        <div style={{ flex: 1, background: 'rgba(16,185,129,.06)', borderRadius: 10, padding: '12px 16px', border: '1px solid rgba(16,185,129,.12)' }}>
+                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Entradas</p>
                           <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--green)' }}><span className="money">+{formatCurrency(inc)}</span></p>
                         </div>
                       )}
                       {out > 0 && (
-                        <div style={{ flex: 1, background: 'var(--red-dim)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(239,68,68,.1)' }}>
-                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Saídas</p>
+                        <div style={{ flex: 1, background: 'var(--red-dim)', borderRadius: 10, padding: '12px 16px', border: '1px solid rgba(239,68,68,.1)' }}>
+                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Saídas</p>
                           <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--red)' }}><span className="money">-{formatCurrency(out)}</span></p>
                         </div>
                       )}

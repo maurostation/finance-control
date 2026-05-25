@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    console.error('estimate-prices: ANTHROPIC_API_KEY not set');
-    return NextResponse.json({ prices: [], error: 'API key not configured' }, { status: 500 });
+    return NextResponse.json({ prices: [], error: 'GROQ_API_KEY not configured' }, { status: 500 });
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = new Groq({ apiKey });
 
   try {
     const { items } = await req.json() as { items: string[] };
@@ -19,8 +18,8 @@ export async function POST(req: NextRequest) {
 
     const itemList = items.map(i => `- ${i}`).join('\n');
 
-    const message = await client.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+    const completion = await client.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -34,9 +33,8 @@ ${itemList}`,
       }],
     });
 
-    const text = (message.content[0] as { type: string; text: string }).text.trim();
+    const text = completion.choices[0]?.message?.content?.trim() ?? '';
 
-    // Extract JSON array from response (handle any stray text)
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.error('estimate-prices: no JSON array in response:', text);
