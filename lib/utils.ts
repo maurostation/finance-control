@@ -30,6 +30,12 @@ export function getCurrentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+export function getNextMonth(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 7);
+}
+
 export function getCurrentMonthLabel(): string {
   return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
     .format(new Date())

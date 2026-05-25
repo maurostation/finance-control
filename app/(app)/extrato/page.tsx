@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, getTransactions, getCards, deleteTransaction, deleteTransactionAll, insertTransaction } from '@/lib/supabase';
 import { Transaction, Card } from '@/lib/types';
-import { formatCurrency, getCurrentMonth } from '@/lib/utils';
+import { formatCurrency, getCurrentMonth, getNextMonth } from '@/lib/utils';
 import { Trash2, TrendingUp, TrendingDown, Pencil, Calendar, AlertTriangle, CreditCard } from 'lucide-react';
 import { onRefresh, openForEdit, broadcastRefresh } from '@/lib/refresh';
 import { ExtratoSkeleton } from '@/components/Skeleton';
@@ -129,7 +129,7 @@ export default function ExtratoPage() {
       const m = new URLSearchParams(window.location.search).get('month');
       if (m && /^\d{4}-\d{2}$/.test(m)) return m;
     }
-    return getCurrentMonth();
+    return getNextMonth();
   });
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
