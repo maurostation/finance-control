@@ -10,7 +10,7 @@ import FinanceTicker from '@/components/FinanceTicker';
 import { supabase, getCards, insertTransaction, updateTransaction } from '@/lib/supabase';
 import { Card, Transaction } from '@/lib/types';
 import { broadcastRefresh, onOpenEdit, broadcastValuesState, onRequestValuesToggle } from '@/lib/refresh';
-import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Banknote, Eye, EyeOff } from 'lucide-react';
+import { LayoutDashboard, List, CreditCard, ShoppingBag, BarChart2, Plus, LogOut, Eye, EyeOff } from 'lucide-react';
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Início',    Icon: LayoutDashboard },
@@ -53,19 +53,14 @@ function Sidebar({ onAddClick, onSignOut, onToggleValues, valuesHidden, pathname
     }}>
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32, paddingLeft: 4 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 9, background: 'var(--a)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 2px 8px rgba(217,119,6,.28)', flexShrink: 0,
-        }}>
-          <Banknote size={17} color="#fff" strokeWidth={2} />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon.svg" alt="Finance Hub" width={36} height={36} style={{ borderRadius: 10, flexShrink: 0, display: 'block' }} />
         <div>
-          <div style={{ fontWeight: 700, fontSize: '.82rem', letterSpacing: '-.03em', color: 'var(--tx)', lineHeight: 1.15 }}>
-            Controle
+          <div style={{ fontWeight: 800, fontSize: '.88rem', letterSpacing: '-.03em', color: 'var(--tx)', lineHeight: 1.15 }}>
+            Finance
           </div>
-          <div style={{ fontWeight: 700, fontSize: '.82rem', letterSpacing: '-.03em', color: 'var(--a)', lineHeight: 1.15 }}>
-            Financeiro
+          <div style={{ fontWeight: 800, fontSize: '.88rem', letterSpacing: '-.03em', color: 'var(--a)', lineHeight: 1.15 }}>
+            Hub
           </div>
         </div>
       </div>
@@ -289,7 +284,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="mobile-nav">
         {/* Floating eye toggle — right side, below ticker */}
         <button className="mobile-eye-float" onClick={toggleValues} title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}>
-          {valuesHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+          {valuesHidden ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
         {/* FAB — right side, above nav */}
         <button className="mobile-fab" onClick={() => setShowSheet(true)}>

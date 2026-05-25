@@ -13,7 +13,7 @@ export default function AnalisePage() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
       {/* Header */}
-      <div style={{ padding: '32px 32px 24px', borderBottom: '1px solid var(--bd)' }}>
+      <div className="page-sticky-head" style={{ paddingBottom: 24, borderBottom: '1px solid var(--bd)' }}>
         <span className="eyebrow" style={{ display: 'block', marginBottom: 10 }}>Análise</span>
         <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--tx)', letterSpacing: '-.03em', marginBottom: 6 }}>
           Seus gráficos
@@ -24,7 +24,7 @@ export default function AnalisePage() {
       </div>
 
       {/* Empty state */}
-      <div style={{ padding: '40px 32px' }}>
+      <div className="page-section" style={{ paddingTop: 40, paddingBottom: 0 }}>
 
         {/* Hero empty illustration */}
         <div style={{

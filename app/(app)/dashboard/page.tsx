@@ -3,65 +3,97 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, getTransactions, getCards, getPlannedPurchases, getSavings, updateSavings, getFutureTransactions } from '@/lib/supabase';
 import { Transaction, Card, PlannedPurchase, SavingsGoal } from '@/lib/types';
-import { formatCurrency, getCurrentMonth, getCurrentMonthLabel, getProgressClass } from '@/lib/utils';
+import { formatCurrency, getCurrentMonth, getProgressClass } from '@/lib/utils';
 import ReserveCard from '@/components/ReserveCard';
 import CardWidget from '@/components/CardWidget';
 import RecurringSection from '@/components/RecurringSection';
-import { TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle, CalendarClock, Eye, EyeOff } from 'lucide-react';
+import {
+  TrendingDown, TrendingUp, Calendar, ArrowRight, AlertCircle,
+  CalendarClock, Eye, EyeOff, ChevronLeft, ChevronRight,
+} from 'lucide-react';
 import Link from 'next/link';
 import { onRefresh, requestValuesToggle, onValuesState } from '@/lib/refresh';
 import { DashboardSkeleton } from '@/components/Skeleton';
 
+function fmtMonth(m: string): string {
+  const l = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+    .format(new Date(m + '-01T00:00:00'));
+  return l.charAt(0).toUpperCase() + l.slice(1);
+}
+
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
-  const [savings, setSavings] = useState<SavingsGoal | null>(null);
-  const [futureTx, setFutureTx] = useState<Transaction[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
-  const [heroHidden, setHeroHidden] = useState(false);
-  const [futureMonth, setFutureMonth] = useState('');
+  const [cards, setCards]               = useState<Card[]>([]);
+  const [purchases, setPurchases]       = useState<PlannedPurchase[]>([]);
+  const [savings, setSavings]           = useState<SavingsGoal | null>(null);
+  const [futureTx, setFutureTx]         = useState<Transaction[]>([]);
+  const [userId, setUserId]             = useState<string | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [payFilter, setPayFilter]       = useState<'all' | 'debit' | 'card'>('all');
+  const [heroHidden, setHeroHidden]     = useState(false);
+  const [futureMonth, setFutureMonth]   = useState('');
+  const [heroMonth, setHeroMonth]       = useState(getCurrentMonth);
 
-  async function loadData(uid: string) {
-    setLoading(true);
-    const [txRes, cardsRes, purchasesRes, savingsRes, futureRes] = await Promise.all([
-      getTransactions(uid, getCurrentMonth()),
+  // ── Load static data (cards, purchases, savings, future tx) ────────────────
+  async function loadStaticData(uid: string) {
+    const [cardsRes, purchasesRes, savingsRes, futureRes] = await Promise.all([
       getCards(uid),
       getPlannedPurchases(uid),
       getSavings(uid),
       getFutureTransactions(uid),
     ]);
-    setTransactions(txRes.data || []);
     setCards(cardsRes.data || []);
     setPurchases(purchasesRes.data || []);
     setSavings(savingsRes.data || null);
     setFutureTx(futureRes.data || []);
-    setLoading(false);
   }
 
+  // ── Load transactions for a specific month ─────────────────────────────────
+  async function loadMonthTx(uid: string, month: string) {
+    const { data } = await getTransactions(uid, month);
+    setTransactions(data || []);
+  }
+
+  // ── Initial load ───────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
-      await loadData(user.id);
+      const cur = getCurrentMonth();
+      setHeroMonth(cur);
+      await Promise.all([
+        loadStaticData(user.id),
+        loadMonthTx(user.id, cur),
+      ]);
+      setLoading(false);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch whenever a transaction is saved anywhere in the app
+  // ── Reload tx when month changes ───────────────────────────────────────────
   useEffect(() => {
     if (!userId) return;
-    return onRefresh(() => loadData(userId));
-  }, [userId]);
+    loadMonthTx(userId, heroMonth);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, heroMonth]);
 
-  // Sync hero eye button with the layout's values-hidden state
+  // ── Re-fetch on transaction events ────────────────────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    return onRefresh(() => {
+      loadStaticData(userId);
+      loadMonthTx(userId, heroMonth);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, heroMonth]);
+
+  // ── Sync hero eye with layout ──────────────────────────────────────────────
   useEffect(() => {
     try { setHeroHidden(localStorage.getItem('fc-values-hidden') === 'true'); } catch {}
     return onValuesState(h => setHeroHidden(h));
   }, []);
 
-  // Auto-select first future month when data loads
+  // ── Auto-select first future month ────────────────────────────────────────
   useEffect(() => {
     if (futureTx.length > 0 && !futureMonth) {
       const months = [...new Set(futureTx.map(t => t.date.slice(0, 7)))].sort();
@@ -69,21 +101,44 @@ export default function DashboardPage() {
     }
   }, [futureTx, futureMonth]);
 
+  // ── Month navigation ───────────────────────────────────────────────────────
+  const currentMonth = getCurrentMonth();
+  const isCurrentMonth = heroMonth === currentMonth;
+
+  const goPrev = () => {
+    const d = new Date(heroMonth + '-01T00:00:00');
+    d.setMonth(d.getMonth() - 1);
+    setHeroMonth(d.toISOString().slice(0, 7));
+  };
+  const goNext = () => {
+    if (isCurrentMonth) return;
+    const d = new Date(heroMonth + '-01T00:00:00');
+    d.setMonth(d.getMonth() + 1);
+    setHeroMonth(d.toISOString().slice(0, 7));
+  };
+
+  // ── Derived numbers ────────────────────────────────────────────────────────
   const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const balance      = totalIncome - totalExpense;
-  const budgetPct    = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 100) : 0;
+
+  // Credit card deferred: card expenses from current month go to next month's bill
+  const cardExpense = isCurrentMonth
+    ? transactions.filter(t => !!t.card_id && t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+    : 0;
+  const debitExpense = totalExpense - cardExpense;
+  const balance      = totalIncome - debitExpense;
+  const budgetPct    = totalIncome > 0 ? Math.min((debitExpense / totalIncome) * 100, 100) : 0;
 
   const now = new Date();
   const thisWeekStart = new Date(now); thisWeekStart.setDate(now.getDate() - now.getDay());
   const lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
 
-  const thisWeekExp = transactions.filter(t => t.type === 'expense' && new Date(t.date + 'T00:00:00') >= thisWeekStart).reduce((s,t) => s + t.amount, 0);
-  const lastWeekExp = transactions.filter(t => { const d = new Date(t.date+'T00:00:00'); return t.type==='expense' && d >= lastWeekStart && d < thisWeekStart; }).reduce((s,t) => s + t.amount, 0);
+  const thisWeekExp = transactions.filter(t => t.type === 'expense' && new Date(t.date + 'T00:00:00') >= thisWeekStart).reduce((s, t) => s + t.amount, 0);
+  const lastWeekExp = transactions.filter(t => { const d = new Date(t.date + 'T00:00:00'); return t.type === 'expense' && d >= lastWeekStart && d < thisWeekStart; }).reduce((s, t) => s + t.amount, 0);
   const weekDelta   = lastWeekExp > 0 ? ((thisWeekExp - lastWeekExp) / lastWeekExp) * 100 : 0;
 
   function cardBill(id: string) {
-    return transactions.filter(t => t.card_id === id && t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+    return transactions.filter(t => t.card_id === id && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   }
 
   const highPriority = purchases.filter(p => p.priority === 'high' && p.status === 'pending');
@@ -103,6 +158,12 @@ export default function DashboardPage() {
     })
     .slice(0, 6);
 
+  // Next month label (for card bill info)
+  const nextMonthDate = new Date(heroMonth + '-01T00:00:00');
+  nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+  const nextMonthShort = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
+    .format(nextMonthDate).replace('.', '');
+
   if (loading) return <DashboardSkeleton />;
 
   return (
@@ -112,7 +173,7 @@ export default function DashboardPage() {
       <div style={{
         background: 'linear-gradient(105deg, #FFFFFF 0%, #F5F6F8 55%, #EDEEF1 100%)',
         borderRadius: 20,
-        padding: '28px 32px',
+        padding: '24px 24px 20px',
         marginBottom: 24,
         position: 'relative', overflow: 'hidden',
         border: '1px solid var(--bd-2)',
@@ -120,69 +181,102 @@ export default function DashboardPage() {
       }}>
         {/* Subtle grid */}
         <div style={{
-          position:'absolute', inset:0, pointerEvents:'none', borderRadius:20,
-          backgroundImage:'linear-gradient(rgba(14,18,25,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(14,18,25,.018) 1px, transparent 1px)',
-          backgroundSize:'40px 40px',
-          maskImage:'radial-gradient(ellipse 80% 80% at 20% 0%, black 0%, transparent 100%)',
+          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 20,
+          backgroundImage: 'linear-gradient(rgba(14,18,25,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(14,18,25,.018) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(ellipse 80% 80% at 20% 0%, black 0%, transparent 100%)',
         }} />
 
-        <div style={{ position:'relative', zIndex:1, display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:24 }}>
-          <div>
-            <span className="eyebrow" style={{ marginBottom:10, display:'block' }}>{getCurrentMonthLabel()}</span>
-            <p style={{ fontSize:'.85rem', color:'var(--tx-3)', marginBottom:6 }}>Disponível no mês</p>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <p style={{ fontSize:'3rem', fontWeight:800, letterSpacing:'-.055em', color: balance >= 0 ? 'var(--tx)' : 'var(--red)', lineHeight:1 }}>
-                <span className="money">{formatCurrency(balance)}</span>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Month nav row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <button className="month-nav-btn" onClick={goPrev} title="Mês anterior">
+              <ChevronLeft size={14} />
+            </button>
+            <span className="eyebrow" style={{ flex: 1, textAlign: 'center' }}>
+              {fmtMonth(heroMonth)}
+              {!isCurrentMonth && (
+                <span style={{ marginLeft: 6, color: 'var(--a)', fontWeight: 600 }}>· histórico</span>
+              )}
+            </span>
+            <button
+              className="month-nav-btn"
+              onClick={goNext}
+              disabled={isCurrentMonth}
+              title="Próximo mês"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', marginBottom: 4 }}>
+                {isCurrentMonth ? 'Disponível este mês' : 'Saldo realizado'}
               </p>
-              {/* Desktop-only eye toggle — near the main number */}
-              <button
-                className="hero-eye-btn"
-                onClick={requestValuesToggle}
-                title={heroHidden ? 'Mostrar valores' : 'Ocultar valores'}
-              >
-                {heroHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                <span>{heroHidden ? 'Mostrar' : 'Ocultar'}</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <p className="hero-balance" style={{ color: balance >= 0 ? 'var(--tx)' : 'var(--red)' }}>
+                  <span className="money">{formatCurrency(balance)}</span>
+                </p>
+                {/* Eye toggle */}
+                <button
+                  className="hero-eye-btn"
+                  onClick={requestValuesToggle}
+                  title={heroHidden ? 'Mostrar valores' : 'Ocultar valores'}
+                >
+                  {heroHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                  <span>{heroHidden ? 'Mostrar' : 'Ocultar'}</span>
+                </button>
+              </div>
+              {/* Card bill deferred info */}
+              {isCurrentMonth && cardExpense > 0 && (
+                <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", marginTop: 4 }}>
+                  Fatura cartão <span style={{ color: 'var(--a)' }}>→ {nextMonthShort}</span>
+                  {': '}
+                  <span className="money" style={{ color: 'var(--red)' }}>-{formatCurrency(cardExpense)}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Income / Expense stats */}
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Entradas', value: totalIncome,  color: 'var(--green)', Icon: TrendingUp  },
+                { label: 'Saídas',   value: debitExpense, color: 'var(--red)',   Icon: TrendingDown },
+              ].map(({ label, value, color, Icon }) => (
+                <div key={label}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <Icon size={12} color={color} />
+                    <span style={{ fontSize: '.68rem', color: 'var(--tx-3)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</span>
+                  </div>
+                  <p style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.03em' }}>
+                    <span className="money">{formatCurrency(value)}</span>
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Stats row */}
-          <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
-            {[
-              { label:'Entradas', value:totalIncome, color:'var(--green)', Icon:TrendingUp },
-              { label:'Saídas',   value:totalExpense, color:'var(--red)',   Icon:TrendingDown },
-            ].map(({ label, value, color, Icon }) => (
-              <div key={label}>
-                <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:4 }}>
-                  <Icon size={13} color={color} />
-                  <span style={{ fontSize:'.72rem', color:'var(--tx-3)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em' }}>{label}</span>
-                </div>
-                <p style={{ fontSize:'1.3rem', fontWeight:700, color:'var(--tx)', letterSpacing:'-.03em' }}><span className="money">{formatCurrency(value)}</span></p>
-              </div>
-            ))}
+          {/* Budget bar */}
+          <div style={{ marginTop: 16 }}>
+            <div className="progress-track" style={{ height: 6 }}>
+              <div className={`progress-fill ${getProgressClass(budgetPct)}`} style={{ width: `${budgetPct}%` }} />
+            </div>
+            <p style={{ marginTop: 5, fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)' }}>
+              {budgetPct.toFixed(0)}% da renda utilizada
+              {isCurrentMonth && cardExpense > 0 && ' (excl. fatura)'}
+            </p>
           </div>
-        </div>
-
-        {/* Budget bar */}
-        <div style={{ marginTop:20, position:'relative', zIndex:1 }}>
-          <div className="progress-track" style={{ height:8 }}>
-            <div className={`progress-fill ${getProgressClass(budgetPct)}`} style={{ width:`${budgetPct}%` }} />
-          </div>
-          <p style={{ marginTop:6, fontSize:'.72rem', fontFamily:"'Geist Mono',monospace", color:'var(--tx-4)' }}>
-            {budgetPct.toFixed(0)}% da renda utilizada este mês
-          </p>
         </div>
       </div>
 
-      {/* ── Main content: single column ── */}
+      {/* ── Main content ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 20 }}>
 
-        {/* Urgent purchases alert strip */}
+        {/* Urgent purchases alert */}
         {highPriority.length > 0 && (
           <div style={{
-            background: 'var(--red-dim)',
-            borderRadius: 12,
-            padding: '12px 16px',
+            background: 'var(--red-dim)', borderRadius: 12, padding: '12px 16px',
             display: 'flex', alignItems: 'center', gap: 12,
           }}>
             <AlertCircle size={15} color="var(--red)" style={{ flexShrink: 0 }} />
@@ -200,11 +294,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Stats + Card: single carousel mobile / equal 3-col desktop ── */}
+        {/* ── Stats + Card: snap carousel mobile / equal 3-col desktop ── */}
         <div className={cards.length > 0 ? 'week-and-cards' : 'week-stats-only'}>
           {[
-            { label: 'Esta semana',    value: thisWeekExp,  sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
-            { label: 'Semana passada', value: lastWeekExp,  sub: 'período anterior', bad: false },
+            { label: 'Esta semana',    value: thisWeekExp, sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
+            { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
           ].map(item => (
             <div key={item.label} style={{
               background: 'var(--sf)', borderRadius: 14, padding: '16px 20px',
@@ -219,7 +313,6 @@ export default function DashboardPage() {
               </p>
             </div>
           ))}
-          {/* Cartão — 3rd column on desktop, 3rd slide on mobile */}
           {cards.length > 0 && (
             <CardWidget card={cards[0]} openBillAmount={cardBill(cards[0].id)} onClick={() => {}} />
           )}
@@ -248,11 +341,6 @@ export default function DashboardPage() {
       {(() => {
         const futureMonths = [...new Set(futureTx.map(t => t.date.slice(0, 7)))].sort();
         const selectedTxs  = futureTx.filter(t => t.date.startsWith(futureMonth));
-        const monthLabel   = (m: string) => {
-          const l = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
-            .format(new Date(m + '-01T00:00:00'));
-          return l.charAt(0).toUpperCase() + l.slice(1);
-        };
         const out = selectedTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
         const inc = selectedTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
 
@@ -263,137 +351,131 @@ export default function DashboardPage() {
               <span className="eyebrow">Próximos meses</span>
             </div>
 
-            {/* Month tabs — scrollable pills */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
-              {futureMonths.map(m => (
-                <button key={m} onClick={() => setFutureMonth(m)} style={{
-                  padding: '6px 16px', borderRadius: 99, fontSize: '.78rem', fontWeight: 500,
-                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, border: '1px solid',
-                  background: futureMonth === m ? 'var(--a)' : 'var(--sf)',
-                  color: futureMonth === m ? '#fff' : 'var(--tx-3)',
-                  borderColor: futureMonth === m ? 'var(--a)' : 'var(--bd-2)',
-                  transition: 'all .15s',
-                }}>
-                  {monthLabel(m)}
-                </button>
-              ))}
-            </div>
-
-            {futureMonth && selectedTxs.length > 0 ? (
-              <>
-                {/* Totals bar */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  {inc > 0 && (
-                    <div style={{ flex: 1, background: 'rgba(16,185,129,.06)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(16,185,129,.12)' }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom: 2 }}>Entradas</p>
-                      <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--green)' }}><span className="money">+{formatCurrency(inc)}</span></p>
-                    </div>
-                  )}
-                  {out > 0 && (
-                    <div style={{ flex: 1, background: 'var(--red-dim)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(239,68,68,.1)' }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom: 2 }}>Saídas</p>
-                      <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--red)' }}><span className="money">-{formatCurrency(out)}</span></p>
-                    </div>
-                  )}
-                </div>
-                {/* Transaction list */}
-                <div style={{ background:'var(--sf)', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)' }}>
-                  {selectedTxs.map((tx, i) => (
-                    <div key={tx.id} style={{
-                      display:'flex', alignItems:'center', gap:12, padding:'12px 20px',
-                      borderBottom: i < selectedTxs.length-1 ? '1px solid var(--bd)' : 'none',
-                    }}>
-                      <div style={{
-                        width:32, height:32, borderRadius:8, flexShrink:0,
-                        background: tx.type==='income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)',
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                      }}>
-                        {tx.type==='income' ? <TrendingUp size={13} color="var(--green)" /> : <TrendingDown size={13} color="var(--tx-3)" />}
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <p style={{ fontSize:'.85rem', fontWeight:500, color:'var(--tx)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tx.description}</p>
-                        <p style={{ fontSize:'.68rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
-                      </div>
-                      <span style={{ fontSize:'.9rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
-                        <span className="money">{tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              /* Empty state for selected month (or no future months at all) */
+            {futureMonths.length === 0 ? (
               <div style={{
-                background: 'var(--sf)', borderRadius: 14, padding: '32px 20px', textAlign: 'center',
-                boxShadow: '0 1px 4px rgba(14,18,25,.06)',
+                background: 'linear-gradient(135deg, var(--a-pale) 0%, #F8F9FB 100%)',
+                borderRadius: 14, padding: '36px 20px', textAlign: 'center',
               }}>
-                <CalendarClock size={24} color="var(--tx-4)" style={{ margin: '0 auto 8px', display: 'block', opacity: .5 }} />
-                <p style={{ fontSize: '.78rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>
-                  {futureMonths.length === 0
-                    ? 'Nenhum lançamento futuro registrado.'
-                    : 'Nenhum lançamento neste mês.'}
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--a-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <CalendarClock size={20} color="var(--a)" />
+                </div>
+                <p style={{ fontSize: '.88rem', fontWeight: 600, color: 'var(--tx)', marginBottom: 6 }}>Nenhum lançamento futuro</p>
+                <p style={{ fontSize: '.78rem', color: 'var(--tx-3)', lineHeight: 1.6, maxWidth: 260, margin: '0 auto' }}>
+                  Lance transações com datas no próximo mês para visualizar sua projeção financeira aqui.
                 </p>
               </div>
+            ) : (
+              <>
+                {/* Month pills */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  {futureMonths.map(m => (
+                    <button key={m} onClick={() => setFutureMonth(m)} style={{
+                      padding: '6px 16px', borderRadius: 99, fontSize: '.78rem', fontWeight: 500,
+                      cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, border: '1px solid',
+                      background: futureMonth === m ? 'var(--a)' : 'var(--sf)',
+                      color: futureMonth === m ? '#fff' : 'var(--tx-3)',
+                      borderColor: futureMonth === m ? 'var(--a)' : 'var(--bd-2)',
+                      transition: 'all .15s',
+                    }}>
+                      {fmtMonth(m)}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedTxs.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      {inc > 0 && (
+                        <div style={{ flex: 1, background: 'rgba(16,185,129,.06)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(16,185,129,.12)' }}>
+                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Entradas</p>
+                          <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--green)' }}><span className="money">+{formatCurrency(inc)}</span></p>
+                        </div>
+                      )}
+                      {out > 0 && (
+                        <div style={{ flex: 1, background: 'var(--red-dim)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(239,68,68,.1)' }}>
+                          <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Saídas</p>
+                          <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--red)' }}><span className="money">-{formatCurrency(out)}</span></p>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ background: 'var(--sf)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)' }}>
+                      {selectedTxs.map((tx, i) => (
+                        <div key={tx.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+                          borderBottom: i < selectedTxs.length - 1 ? '1px solid var(--bd)' : 'none',
+                        }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {tx.type === 'income' ? <TrendingUp size={13} color="var(--green)" /> : <TrendingDown size={13} color="var(--tx-3)" />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '.85rem', fontWeight: 500, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</p>
+                            <p style={{ fontSize: '.68rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
+                          </div>
+                          <span style={{ fontSize: '.9rem', fontWeight: 700, color: tx.type === 'income' ? 'var(--green)' : 'var(--tx)', flexShrink: 0 }}>
+                            <span className="money">{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ background: 'var(--sf)', borderRadius: 14, padding: '28px 20px', textAlign: 'center', boxShadow: '0 1px 4px rgba(14,18,25,.06)' }}>
+                    <CalendarClock size={22} color="var(--tx-4)" style={{ margin: '0 auto 8px', display: 'block', opacity: .45 }} />
+                    <p style={{ fontSize: '.78rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace" }}>Nenhum lançamento neste mês.</p>
+                  </div>
+                )}
+              </>
             )}
           </section>
         );
       })()}
 
-      {/* ── Recent transactions (full width) ── */}
+      {/* ── Lançamentos recentes ── */}
       {(recentTx.length > 0 || transactions.length > 0) && (
-        <section style={{ marginTop:24 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <section style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span className="eyebrow">Lançamentos recentes</span>
-            <Link href="/extrato" style={{ fontSize:'.75rem', color:'var(--a)', fontWeight:500, textDecoration:'none', display:'flex', alignItems:'center', gap:3 }}>
-              Ver extrato completo <ArrowRight size={12} />
+            <Link href={`/extrato?month=${heroMonth}`} style={{ fontSize: '.75rem', color: 'var(--a)', fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+              Ver extrato <ArrowRight size={12} />
             </Link>
           </div>
-          {/* Débito / Cartão chips */}
-          <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-            {(['all','debit','card'] as const).map(f => (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {(['all', 'debit', 'card'] as const).map(f => (
               <button key={f} onClick={() => setPayFilter(f)} style={{
-                padding:'4px 12px', borderRadius:99, fontSize:'.73rem', fontWeight:500,
-                border:'1px solid var(--bd-2)', cursor:'pointer',
-                background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
-                color: payFilter===f ? '#fff' : 'var(--tx-3)',
-                borderColor: payFilter===f ? 'var(--tx-2)' : 'var(--bd-2)',
+                padding: '4px 12px', borderRadius: 99, fontSize: '.73rem', fontWeight: 500,
+                border: '1px solid var(--bd-2)', cursor: 'pointer',
+                background: payFilter === f ? 'var(--tx-2)' : 'var(--sf)',
+                color: payFilter === f ? '#fff' : 'var(--tx-3)',
+                borderColor: payFilter === f ? 'var(--tx-2)' : 'var(--bd-2)',
               }}>
                 {f === 'all' ? 'Todos' : f === 'debit' ? 'Débito' : 'Cartão'}
               </button>
             ))}
           </div>
-          <div style={{
-            background:'var(--sf)', borderRadius:14,
-            boxShadow:'0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
-            overflow:'hidden',
-          }}>
+          <div style={{ background: 'var(--sf)', borderRadius: 14, boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)', overflow: 'hidden' }}>
             {recentTx.length === 0 && (
-              <p style={{ textAlign:'center', padding:'24px', color:'var(--tx-4)', fontSize:'.78rem', fontFamily:"'Geist Mono',monospace" }}>
+              <p style={{ textAlign: 'center', padding: '24px', color: 'var(--tx-4)', fontSize: '.78rem', fontFamily: "'Geist Mono',monospace" }}>
                 Nenhum lançamento neste filtro.
               </p>
             )}
             {recentTx.map((tx, i) => (
               <div key={tx.id} style={{
-                display:'flex', alignItems:'center', gap:12, padding:'12px 20px',
-                borderBottom: i < recentTx.length-1 ? '1px solid var(--bd)' : 'none',
-                transition:'background .15s',
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+                borderBottom: i < recentTx.length - 1 ? '1px solid var(--bd)' : 'none',
+                transition: 'background .15s',
               }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='var(--bg)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='transparent'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
-                <div style={{
-                  width:34, height:34, borderRadius:9, flexShrink:0,
-                  background: tx.type==='income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)',
-                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:'.9rem',
-                }}>
-                  {tx.type==='income' ? <TrendingUp size={15} color="var(--green)" /> : <TrendingDown size={15} color="var(--tx-3)" />}
+                <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {tx.type === 'income' ? <TrendingUp size={15} color="var(--green)" /> : <TrendingDown size={15} color="var(--tx-3)" />}
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:'.87rem', fontWeight:500, color:'var(--tx)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tx.description}</p>
-                  <p style={{ fontSize:'.72rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '.87rem', fontWeight: 500, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</p>
+                  <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
                 </div>
-                <span style={{ fontSize:'.92rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
-                  <span className="money">{tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
+                <span style={{ fontSize: '.92rem', fontWeight: 700, color: tx.type === 'income' ? 'var(--green)' : 'var(--tx)', flexShrink: 0 }}>
+                  <span className="money">{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                 </span>
               </div>
             ))}
@@ -402,10 +484,11 @@ export default function DashboardPage() {
       )}
 
       {transactions.length === 0 && (
-        <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--tx-4)' }}>
-          <Calendar size={32} style={{ margin:'0 auto 14px', display:'block' }} />
-          <p style={{ fontFamily:"'Geist Mono',monospace", fontSize:'.8rem', letterSpacing:'.04em' }}>
-            Nenhum lançamento este mês.<br />Use o botão Lançar para começar.
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <Calendar size={32} color="var(--tx-4)" style={{ margin: '0 auto 14px', display: 'block', opacity: .4 }} />
+          <p style={{ fontFamily: "'Geist Mono',monospace", fontSize: '.8rem', color: 'var(--tx-4)', letterSpacing: '.04em', lineHeight: 1.6 }}>
+            Nenhum lançamento em {fmtMonth(heroMonth)}.<br />
+            {isCurrentMonth ? 'Use o botão + para começar.' : 'Nenhum dado registrado neste período.'}
           </p>
         </div>
       )}

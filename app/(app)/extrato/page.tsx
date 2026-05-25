@@ -22,7 +22,14 @@ function monthLabel(m: string) {
 }
 
 export default function ExtratoPage() {
-  const [month, setMonth] = useState(getCurrentMonth());
+  const [month, setMonth] = useState(() => {
+    // Sync with dashboard month via URL param (?month=YYYY-MM)
+    if (typeof window !== 'undefined') {
+      const m = new URLSearchParams(window.location.search).get('month');
+      if (m && /^\d{4}-\d{2}$/.test(m)) return m;
+    }
+    return getCurrentMonth();
+  });
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);

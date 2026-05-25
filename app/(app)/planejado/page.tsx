@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   supabase, getPlannedPurchases, insertPlannedPurchase, markPurchaseBought,
   updatePlannedPurchase, deletePlannedPurchase,
@@ -83,6 +83,29 @@ export default function PlanejadoPage() {
   const [prioFilter, setPrioFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [showBought, setShowBought] = useState(false);
   const [showBoughtWishes, setShowBoughtWishes] = useState(false);
+
+  // ── Grocery item autocomplete ──────────────────────────────────────────────
+  const [itemSuggestions, setItemSuggestions] = useState<Record<string, string[]>>({});
+  const suggestTimer = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  async function fetchSuggestions(listId: string, query: string) {
+    if (suggestTimer.current[listId]) clearTimeout(suggestTimer.current[listId]);
+    if (query.trim().length < 2) {
+      setItemSuggestions(prev => ({ ...prev, [listId]: [] }));
+      return;
+    }
+    suggestTimer.current[listId] = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/suggest-products?q=${encodeURIComponent(query)}`);
+        const { suggestions } = await res.json() as { suggestions: string[] };
+        setItemSuggestions(prev => ({ ...prev, [listId]: suggestions }));
+      } catch { /* ignore network errors */ }
+    }, 280);
+  }
+
+  function clearSuggestions(listId: string) {
+    setTimeout(() => setItemSuggestions(prev => ({ ...prev, [listId]: [] })), 150);
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -337,7 +360,7 @@ export default function PlanejadoPage() {
     return (
       <div style={{
         display: 'flex', gap: 10, alignItems: 'flex-start',
-        padding: '13px 0',
+        padding: '14px 0',
         borderBottom: '1px solid var(--bd)',
         opacity: p.status === 'bought' ? .55 : 1,
       }}>
@@ -388,10 +411,13 @@ export default function PlanejadoPage() {
           </div>
         </div>
         {p.status === 'pending' && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
             <button onClick={() => openEdit(p)} title="Editar"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx-4)', display: 'flex', padding: 2 }}>
-              <Pencil size={12} />
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx-4)', display: 'flex', padding: 8, borderRadius: 7, minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center', transition: 'background .12s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-1)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
+            >
+              <Pencil size={14} />
             </button>
             {tab === 'desejos' && (
               <button
@@ -402,11 +428,12 @@ export default function PlanejadoPage() {
                 title="Mover para Compras"
                 style={{
                   background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
-                  borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
-                  fontSize: '.68rem', fontWeight: 600, color: 'var(--a)',
+                  borderRadius: 7, padding: '6px 10px', cursor: 'pointer',
+                  fontSize: '.72rem', fontWeight: 600, color: 'var(--a)',
+                  display: 'flex', alignItems: 'center', gap: 4, minHeight: 34,
                 }}
               >
-                <ShoppingCart size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                <ShoppingCart size={12} />
                 Comprar
               </button>
             )}
@@ -415,16 +442,20 @@ export default function PlanejadoPage() {
                 onClick={() => markBought(p.id)}
                 style={{
                   background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
-                  borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
-                  fontSize: '.68rem', fontWeight: 600, color: 'var(--a)', whiteSpace: 'nowrap',
+                  borderRadius: 7, padding: '6px 10px', cursor: 'pointer',
+                  fontSize: '.72rem', fontWeight: 600, color: 'var(--a)', whiteSpace: 'nowrap',
+                  minHeight: 34,
                 }}
               >
                 Comprei!
               </button>
             )}
             <button onClick={() => deletePurchase(p.id)} title="Excluir"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx-4)', display: 'flex', padding: 2 }}>
-              <Trash2 size={12} />
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx-4)', display: 'flex', padding: 8, borderRadius: 7, minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center', transition: 'background .12s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--red-dim)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
+            >
+              <Trash2 size={14} />
             </button>
           </div>
         )}
@@ -527,11 +558,25 @@ export default function PlanejadoPage() {
 
           {/* Empty state */}
           {mercadoActive.length === 0 && !showNewList && (
-            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--tx-4)' }}>
-              <ShoppingCart size={28} style={{ margin: '0 auto 12px', display: 'block', opacity: .5 }} />
-              <p style={{ fontFamily: "'Geist Mono',monospace", fontSize: '.78rem' }}>
-                Nenhuma lista ativa. Crie sua primeira lista!
+            <div style={{
+              background: 'linear-gradient(135deg, var(--a-pale) 0%, #F8F9FB 100%)',
+              borderRadius: 16, padding: '40px 20px', textAlign: 'center',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 20, alignItems: 'flex-end', height: 48 }}>
+                {[35, 55, 45, 72, 50, 38].map((h, i) => (
+                  <div key={i} style={{ width: 10, height: `${h}%`, borderRadius: '4px 4px 2px 2px', background: i === 3 ? 'var(--a)' : 'var(--bg-2)', opacity: i === 3 ? 1 : 0.5 }} />
+                ))}
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--a-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <ShoppingCart size={22} color="var(--a)" />
+              </div>
+              <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--tx)', marginBottom: 6 }}>Crie sua lista de mercado</p>
+              <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', lineHeight: 1.6, maxWidth: 260, margin: '0 auto 16px' }}>
+                Organize as compras, adicione itens e use IA para estimar o total — tudo em um lugar.
               </p>
+              <button className="btn-amber" onClick={() => setShowNewList(true)} style={{ fontSize: '.82rem' }}>
+                <Plus size={14} /> Nova lista
+              </button>
             </div>
           )}
 
@@ -642,20 +687,60 @@ export default function PlanejadoPage() {
                       </div>
                     ))}
 
-                    {/* Add item row */}
+                    {/* Add item row — with autocomplete */}
                     <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                      <input
-                        className="input"
-                        placeholder="Adicionar item…"
-                        value={newItemText[list.id] || ''}
-                        onChange={e => setNewItemText(prev => ({ ...prev, [list.id]: e.target.value }))}
-                        onKeyDown={e => e.key === 'Enter' && addGroceryItem(list.id)}
-                        style={{ flex: 1, fontSize: '.82rem', padding: '.45rem .75rem' }}
-                      />
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          className="input"
+                          placeholder="Adicionar item…"
+                          value={newItemText[list.id] || ''}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setNewItemText(prev => ({ ...prev, [list.id]: v }));
+                            fetchSuggestions(list.id, v);
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { addGroceryItem(list.id); setItemSuggestions(prev => ({ ...prev, [list.id]: [] })); }
+                            if (e.key === 'Escape') setItemSuggestions(prev => ({ ...prev, [list.id]: [] }));
+                          }}
+                          onBlur={() => clearSuggestions(list.id)}
+                          style={{ width: '100%', fontSize: '.82rem', padding: '.45rem .75rem' }}
+                        />
+                        {/* Suggestions dropdown */}
+                        {(itemSuggestions[list.id] || []).length > 0 && (
+                          <div style={{
+                            position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0,
+                            background: 'var(--sf)', border: '1px solid var(--bd-2)',
+                            borderRadius: 10, boxShadow: '0 4px 20px rgba(14,18,25,.12)',
+                            zIndex: 200, overflow: 'hidden',
+                          }}>
+                            {(itemSuggestions[list.id] || []).map((s, i, arr) => (
+                              <button
+                                key={i}
+                                onMouseDown={() => {
+                                  setNewItemText(prev => ({ ...prev, [list.id]: s }));
+                                  setItemSuggestions(prev => ({ ...prev, [list.id]: [] }));
+                                }}
+                                style={{
+                                  display: 'block', width: '100%', textAlign: 'left',
+                                  padding: '10px 14px', fontSize: '.83rem', color: 'var(--tx)',
+                                  background: 'none', border: 'none', cursor: 'pointer',
+                                  borderBottom: i < arr.length - 1 ? '1px solid var(--bd)' : 'none',
+                                  transition: 'background .1s',
+                                }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-1)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
+                              >
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         className="btn-amber"
-                        onClick={() => addGroceryItem(list.id)}
-                        style={{ padding: '.45rem .75rem', fontSize: '.78rem' }}
+                        onClick={() => { addGroceryItem(list.id); setItemSuggestions(prev => ({ ...prev, [list.id]: [] })); }}
+                        style={{ padding: '.45rem .75rem', fontSize: '.78rem', flexShrink: 0 }}
                       >
                         <Plus size={13} />
                       </button>
@@ -790,11 +875,26 @@ export default function PlanejadoPage() {
           {showForm && PurchaseForm}
 
           {filteredCompras.length === 0 && !showForm && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--tx-4)' }}>
-              <ShoppingBag size={28} style={{ margin: '0 auto 12px', display: 'block', opacity: .5 }} />
-              <p style={{ fontFamily: "'Geist Mono',monospace", fontSize: '.78rem' }}>
-                {prioFilter === 'all' ? 'Nenhuma compra planejada.' : `Nenhuma compra com prioridade ${prioFilter === 'high' ? 'alta' : prioFilter === 'medium' ? 'média' : 'baixa'}.`}
+            <div style={{
+              background: 'linear-gradient(135deg, var(--a-pale) 0%, #F8F9FB 100%)',
+              borderRadius: 16, padding: '40px 20px', textAlign: 'center', marginTop: 4,
+            }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--a-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <ShoppingBag size={22} color="var(--a)" />
+              </div>
+              <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--tx)', marginBottom: 6 }}>
+                {prioFilter === 'all' ? 'Nenhuma compra planejada' : `Nenhuma com prioridade ${prioFilter === 'high' ? 'alta' : prioFilter === 'medium' ? 'média' : 'baixa'}`}
               </p>
+              {prioFilter === 'all' && (
+                <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', lineHeight: 1.6, maxWidth: 260, margin: '0 auto 16px' }}>
+                  Adicione compras com prioridade, data e link para acompanhar tudo que precisa comprar.
+                </p>
+              )}
+              {prioFilter === 'all' && (
+                <button className="btn-amber" onClick={() => setShowForm(true)} style={{ fontSize: '.82rem' }}>
+                  <Plus size={14} /> Adicionar compra
+                </button>
+              )}
             </div>
           )}
 
@@ -861,11 +961,20 @@ export default function PlanejadoPage() {
           {showForm && PurchaseForm}
 
           {desejosPending.length === 0 && !showForm && (
-            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--tx-4)' }}>
-              <Heart size={28} style={{ margin: '0 auto 12px', display: 'block', opacity: .5 }} />
-              <p style={{ fontFamily: "'Geist Mono',monospace", fontSize: '.78rem' }}>
-                Sua lista de desejos está vazia.
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(239,68,68,.04) 0%, #F8F9FB 100%)',
+              borderRadius: 16, padding: '40px 20px', textAlign: 'center', marginTop: 4,
+            }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(239,68,68,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <Heart size={22} color="var(--red)" />
+              </div>
+              <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--tx)', marginBottom: 6 }}>Sua lista de desejos</p>
+              <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', lineHeight: 1.6, maxWidth: 260, margin: '0 auto 16px' }}>
+                Salve aqui tudo que quer comprar mas que ainda nao e urgente. Mova para Compras na hora certa.
               </p>
+              <button className="btn-amber" onClick={() => setShowForm(true)} style={{ fontSize: '.82rem' }}>
+                <Plus size={14} /> Adicionar desejo
+              </button>
             </div>
           )}
 

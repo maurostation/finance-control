@@ -8,6 +8,7 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono"
 export const metadata: Metadata = {
   title: "Finance Hub",
   description: "Sua central financeira pessoal",
+  manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Finance Hub" },
   icons: {
     icon: '/icon.svg',

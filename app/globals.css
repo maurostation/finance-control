@@ -332,8 +332,8 @@ select.input {
 }
 
 /* ── Main cards row (Esta semana + Semana passada + Cartão)
-   Mobile: single snap carousel — one card visible at a time
-   Desktop: equal 3-column grid                               */
+   Mobile: full-bleed snap carousel — breaks out of px-page padding
+   Desktop: equal 3-column grid                                      */
 .week-and-cards {
   display: flex;
   overflow-x: auto;
@@ -341,17 +341,20 @@ select.input {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   gap: 16px;
-  padding: 4px 0 12px; /* shadow room */
-  margin-bottom: -8px;
+  /* Break out of px-page (16px) so cards reach the screen edges */
+  margin-left: -16px;
+  margin-right: -16px;
+  /* Leading padding restores the visual gap from screen edge */
+  padding: 8px 16px 16px;
 }
 .week-and-cards::-webkit-scrollbar { display: none; }
 .week-and-cards > * {
-  flex: 0 0 84%;
+  flex: 0 0 calc(100% - 48px); /* one card at a time with peek */
   scroll-snap-align: start;
   min-width: 0;
   flex-shrink: 0;
 }
-/* week-stats-only: same but 2 items */
+/* week-stats-only: same but shows 2 items */
 .week-stats-only {
   display: flex;
   overflow-x: auto;
@@ -359,11 +362,12 @@ select.input {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   gap: 16px;
-  padding: 4px 0 12px;
-  margin-bottom: -8px;
+  margin-left: -16px;
+  margin-right: -16px;
+  padding: 8px 16px 16px;
 }
 .week-stats-only::-webkit-scrollbar { display: none; }
-.week-stats-only > * { flex: 0 0 84%; scroll-snap-align: start; min-width: 0; flex-shrink: 0; }
+.week-stats-only > * { flex: 0 0 calc(100% - 48px); scroll-snap-align: start; min-width: 0; flex-shrink: 0; }
 
 @media (min-width: 768px) {
   .week-and-cards {
@@ -373,8 +377,9 @@ select.input {
     overflow-x: visible;
     scroll-snap-type: none;
     align-items: stretch;
+    margin-left: 0;
+    margin-right: 0;
     padding: 0;
-    margin-bottom: 0;
   }
   .week-and-cards > * { flex: none; }
   .week-stats-only {
@@ -383,8 +388,9 @@ select.input {
     gap: 16px;
     overflow-x: visible;
     scroll-snap-type: none;
+    margin-left: 0;
+    margin-right: 0;
     padding: 0;
-    margin-bottom: 0;
   }
   .week-stats-only > * { flex: none; }
 }
@@ -460,8 +466,8 @@ select.input {
   top: calc(var(--ticker-h) + env(safe-area-inset-top) + 8px);
   right: 16px;
   z-index: 29;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--sf);
   border: 1px solid var(--bd-2);
@@ -515,3 +521,26 @@ select.input {
 
 /* Divider line between list items — keep as hairline */
 .divider { border: none; border-top: 1px solid var(--bd); margin: 0; }
+
+/* Hero balance — responsive font to prevent clipping on small screens */
+.hero-balance {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -.05em;
+  line-height: 1;
+  word-break: break-all;
+}
+@media (min-width: 420px) { .hero-balance { font-size: 2.4rem; } }
+@media (min-width: 768px)  { .hero-balance { font-size: 3rem; letter-spacing: -.055em; } }
+
+/* Month navigation arrows in hero */
+.month-nav-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--bg-1); border: 1px solid var(--bd-2);
+  cursor: pointer; color: var(--tx-3); flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.month-nav-btn:hover { background: var(--bg-2); color: var(--tx); }
+.month-nav-btn:disabled { opacity: .3; cursor: default; }
+.month-nav-btn:disabled:hover { background: var(--bg-1); color: var(--tx-3); }
