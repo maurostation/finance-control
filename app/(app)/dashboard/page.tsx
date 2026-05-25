@@ -193,6 +193,8 @@ export default function DashboardPage() {
 
         {/* ── Stats + Cards row: mesma linha no desktop ── */}
         <div className={cards.length > 0 ? 'week-and-cards' : 'week-stats-only'}>
+          {/* Carousel on mobile, two grid cells on desktop */}
+          <div className="week-stats-row">
           {[
             { label: 'Esta semana',   value: thisWeekExp, sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
             { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
@@ -210,6 +212,7 @@ export default function DashboardPage() {
               </p>
             </div>
           ))}
+          </div>
 
           {/* Cards column — carousel mobile, stack desktop */}
           {cards.length > 0 && (
@@ -221,6 +224,7 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
         </div>
 
         {/* Reserve */}

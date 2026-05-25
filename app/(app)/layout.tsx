@@ -264,21 +264,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Mobile eye toggle */}
-      <button className="mobile-eye-btn" onClick={toggleValues}>
-        {valuesHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-        {valuesHidden ? 'Mostrar' : 'Ocultar'}
-      </button>
-
       {/* Desktop layout */}
       <div style={{ display: 'flex', minHeight: '100svh' }} className={`desktop-layout${valuesHidden ? ' values-hidden' : ''}`}>
         <div className="sidebar-wrapper">
           <Sidebar onAddClick={() => setShowSheet(true)} onSignOut={handleSignOut} onToggleValues={toggleValues} valuesHidden={valuesHidden} pathname={pathname} userId={userId} />
         </div>
         <main className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
-          {/* Full-width sticky ticker at top of every page */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 30 }}>
-            <FinanceTicker />
+          {/* Ticker + mobile eye toggle on the right */}
+          <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'stretch', background: 'var(--a-pale)', borderBottom: '1px solid var(--a-bd)' }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <FinanceTicker />
+            </div>
+            <button className="ticker-eye-btn" onClick={toggleValues}>
+              {valuesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
           <div style={{ flex: 1 }}>
             {children}
@@ -286,9 +285,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile FAB + bottom nav */}
       <div className="mobile-nav">
-        <BottomNav onAddClick={() => setShowSheet(true)} />
+        <button className="mobile-fab" onClick={() => setShowSheet(true)}>
+          <Plus size={22} />
+        </button>
+        <BottomNav />
       </div>
 
       {showSheet && (

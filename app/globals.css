@@ -243,8 +243,8 @@ select.input {
 .main-content {
   flex: 1;
   min-width: 0;
-  /* nav height (60px) + extra breathing room + home indicator */
-  padding-bottom: calc(60px + env(safe-area-inset-bottom) + 16px);
+  /* nav (60) + fab clearance (56+12) + safe area + breathing room */
+  padding-bottom: calc(60px + env(safe-area-inset-bottom) + 48px);
 }
 
 /* Desktop: sidebar visible, bottom nav hidden */
@@ -278,6 +278,56 @@ select.input {
   .dashboard-grid-full {
     grid-column: 1 / -1;
   }
+}
+
+/* Summary pills (extrato/planejado): carousel on mobile, grid on desktop */
+.summary-pills {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 10px;
+}
+.summary-pills::-webkit-scrollbar { display: none; }
+.summary-pills > * {
+  flex: 0 0 82%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .summary-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+  .summary-pills > * { flex: none; }
+}
+
+/* Week stats row: horizontal snap carousel on mobile, flows into grid on desktop */
+.week-stats-row {
+  grid-column: 1 / -1;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 12px;
+}
+.week-stats-row::-webkit-scrollbar { display: none; }
+.week-stats-row > * {
+  flex: 0 0 86%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  /* On desktop the wrapper disappears and its children become grid items */
+  .week-stats-row {
+    display: contents;
+  }
+  .week-stats-row > * { flex: none; }
 }
 
 /* Dashboard: week stats (2 tiles) + card column on same row on desktop */
@@ -337,14 +387,16 @@ select.input {
   }
 }
 
-/* ── Eye toggle: ocultar valores ── */
+/* ── Eye toggle: ocultar valores ── retângulo tipo skeleton, sem blur */
 .money {
-  transition: filter .25s ease, opacity .25s ease;
   display: inline-block;
+  border-radius: 3px;
+  transition: color .2s ease, background .2s ease;
 }
 .values-hidden .money {
-  filter: blur(8px);
-  opacity: .5;
+  color: transparent !important;
+  background: var(--bg-2);
+  border-radius: 3px;
   user-select: none;
   pointer-events: none;
 }
@@ -383,28 +435,50 @@ select.input {
   }
 }
 
-/* Mobile eye button */
-.mobile-eye-btn {
+/* Eye toggle inside the ticker bar — mobile only */
+.ticker-eye-btn {
   display: flex;
-  position: fixed;
-  top: 12px;
-  right: 14px;
-  z-index: 400;
-  background: rgba(255,255,255,.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--bd-2);
-  border-radius: 99px;
-  padding: 6px 10px;
-  cursor: pointer;
-  color: var(--tx-3);
   align-items: center;
-  gap: 5px;
-  font-size: .7rem;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(14,18,25,.08);
+  justify-content: center;
+  width: 52px;
+  height: 44px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--a-bd);
+  cursor: pointer;
+  color: var(--a);
+  transition: background .15s;
 }
+.ticker-eye-btn:active { background: var(--a-dim); }
+.values-hidden .ticker-eye-btn { background: var(--a-dim); }
 @media (min-width: 768px) {
-  .mobile-eye-btn { display: none; }
+  .ticker-eye-btn { display: none; }
+}
+
+/* Mobile FAB — floats above center of bottom nav */
+.mobile-fab {
+  position: fixed;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 201;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--a);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(217,119,6,.45);
+  transition: box-shadow .2s, transform .12s;
+}
+.mobile-fab:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 2px 12px rgba(217,119,6,.3); }
+@media (min-width: 768px) {
+  .mobile-fab { display: none; }
 }
 
 /* Surface card — NO border, shadow only */

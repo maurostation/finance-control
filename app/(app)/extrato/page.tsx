@@ -99,21 +99,21 @@ export default function ExtratoPage() {
           {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
 
-        {/* Summary pills */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+        {/* Summary pills — carousel on mobile, 3-col on desktop */}
+        <div className="summary-pills">
           {[
             { label:'Entradas', value:totalIncome, color:'var(--green)' },
             { label:'Saídas', value:totalExpense, color:'var(--red)' },
             { label:'Saldo', value:totalIncome - totalExpense, color: totalIncome - totalExpense >= 0 ? 'var(--tx)' : 'var(--red)' },
           ].map(s => (
             <div key={s.label} style={{
-              background:'var(--bg-1)', borderRadius:10, padding:'10px 12px',
+              background:'var(--bg-1)', borderRadius:10, padding:'12px 16px',
               boxShadow:'0 1px 4px rgba(14,18,25,.06)',
             }}>
-              <p style={{ fontSize:'.65rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom:3 }}>
+              <p style={{ fontSize:'.65rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom:4 }}>
                 {s.label}
               </p>
-              <p style={{ fontSize:'.9rem', fontWeight:700, color:s.color, letterSpacing:'-.02em' }}>
+              <p style={{ fontSize:'1rem', fontWeight:700, color:s.color, letterSpacing:'-.02em' }}>
                 <span className="money">{formatCurrency(s.value)}</span>
               </p>
             </div>
