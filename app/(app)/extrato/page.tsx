@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase, getTransactions, getCards, deleteTransaction, deleteTransactionAll } from '@/lib/supabase';
+import { useState, useEffect, useRef } from 'react';
+import { supabase, getTransactions, getCards, deleteTransaction, deleteTransactionAll, insertTransaction } from '@/lib/supabase';
 import { Transaction, Card } from '@/lib/types';
 import { formatCurrency, getCurrentMonth } from '@/lib/utils';
-import { Trash2, TrendingUp, TrendingDown, Pencil, Calendar, AlertTriangle } from 'lucide-react';
-import { onRefresh, openForEdit } from '@/lib/refresh';
+import { Trash2, TrendingUp, TrendingDown, Pencil, Calendar, AlertTriangle, CreditCard } from 'lucide-react';
+import { onRefresh, openForEdit, broadcastRefresh } from '@/lib/refresh';
 import { ExtratoSkeleton } from '@/components/Skeleton';
 import RecurringSection from '@/components/RecurringSection';
 
@@ -19,6 +19,12 @@ const MONTHS = Array.from({ length: 9 }, (_, i) => {
 function monthLabel(m: string) {
   const [y, mo] = m.split('-');
   return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+    .format(new Date(Number(y), Number(mo) - 1, 1));
+}
+
+function shortMonth(m: string) {
+  const [y, mo] = m.split('-');
+  return new Intl.DateTimeFormat('pt-BR', { month: 'long' })
     .format(new Date(Number(y), Number(mo) - 1, 1));
 }
 
@@ -39,9 +45,8 @@ function DeleteConfirm({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 600,
+        position: 'fixed', inset: 0, zIndex: 2000,
         background: 'rgba(14,18,25,.5)',
-        backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '20px',
         animation: 'fadeIn .15s ease',
@@ -60,7 +65,6 @@ function DeleteConfirm({
           animation: 'modalIn .2s cubic-bezier(.4,0,.2,1)',
         }}
       >
-        {/* Icon */}
         <div style={{
           width: 44, height: 44, borderRadius: 12,
           background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.18)',
@@ -80,7 +84,6 @@ function DeleteConfirm({
           {formatCurrency(tx.amount)} · {tx.category} · {tx.date}
         </p>
 
-        {/* Installment warning */}
         {isParentInstallment && (
           <div style={{
             background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.2)',
@@ -92,65 +95,24 @@ function DeleteConfirm({
           </div>
         )}
 
-        {/* Action buttons */}
         {isParentInstallment ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button
-              onClick={onConfirmSingle}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 10,
-                background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)',
-                color: 'var(--red)', fontWeight: 600, fontSize: '.875rem',
-                cursor: 'pointer', fontFamily: 'inherit', transition: 'background .15s',
-              }}
-            >
+            <button onClick={onConfirmSingle} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.25)', color: 'var(--red)', fontWeight: 600, fontSize: '.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Excluir apenas este mês
             </button>
-            <button
-              onClick={onConfirmAll}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 10,
-                background: 'var(--red)', border: 'none',
-                color: '#fff', fontWeight: 600, fontSize: '.875rem',
-                cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity .15s',
-              }}
-            >
+            <button onClick={onConfirmAll} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Excluir todos os meses ({tx.total_installments}x)
             </button>
-            <button
-              onClick={onCancel}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 10,
-                background: 'none', border: '1px solid var(--bd-2)',
-                color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={onCancel} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'none', border: '1px solid var(--bd-2)', color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Cancelar
             </button>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={onCancel}
-              style={{
-                flex: 1, padding: '11px', borderRadius: 10,
-                background: 'none', border: '1px solid var(--bd-2)',
-                color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={onCancel} style={{ flex: 1, padding: '11px', borderRadius: 10, background: 'none', border: '1px solid var(--bd-2)', color: 'var(--tx-3)', fontWeight: 500, fontSize: '.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Cancelar
             </button>
-            <button
-              onClick={onConfirmSingle}
-              style={{
-                flex: 1, padding: '11px', borderRadius: 10,
-                background: 'var(--red)', border: 'none',
-                color: '#fff', fontWeight: 600, fontSize: '.875rem',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={onConfirmSingle} style={{ flex: 1, padding: '11px', borderRadius: 10, background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               Excluir
             </button>
           </div>
@@ -176,31 +138,57 @@ export default function ExtratoPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
+  // Fatura do mês anterior
+  const [prevCardBill, setPrevCardBill] = useState(0);
+  const [prevMonth, setPrevMonth] = useState('');
+  const [launchingBill, setLaunchingBill] = useState(false);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
+      userIdRef.current = user.id;
       setUserId(user.id);
       getCards(user.id).then(({ data }) => setCards(data || []));
-      loadTx(user.id, month);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load tx on month/userId change — shows skeleton (intentional)
   useEffect(() => {
-    if (userId) loadTx(userId, month);
+    if (userId) loadTx(userId, month, false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month, userId]);
 
+  // Refresh WITHOUT skeleton — keeps RecurringSection mounted, breaks auto-launch loop
   useEffect(() => {
     if (!userId) return;
-    return onRefresh(() => loadTx(userId, month));
+    return onRefresh(() => loadTx(userId, month, true));
   }, [userId, month]);
 
-  async function loadTx(uid: string, m: string) {
-    setLoading(true);
+  // Load previous month's card bill when viewing a future month
+  useEffect(() => {
+    if (!userId) return;
+    const currentMonth = getCurrentMonth();
+    if (month <= currentMonth) { setPrevCardBill(0); setPrevMonth(''); return; }
+    const d = new Date(month + '-01T00:00:00');
+    d.setMonth(d.getMonth() - 1);
+    const prev = d.toISOString().slice(0, 7);
+    setPrevMonth(prev);
+    getTransactions(userId, prev).then(({ data }) => {
+      const bill = (data || [])
+        .filter(t => !!t.card_id && t.type === 'expense')
+        .reduce((s, t) => s + t.amount, 0);
+      setPrevCardBill(bill);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, month]);
+
+  // skipSkeleton=true → silent refresh (RecurringSection stays mounted)
+  async function loadTx(uid: string, m: string, skipSkeleton: boolean) {
+    if (!skipSkeleton) setLoading(true);
     const { data } = await getTransactions(uid, m);
     setTransactions(data || []);
-    setLoading(false);
+    if (!skipSkeleton) setLoading(false);
   }
 
   async function handleDeleteSingle(tx: Transaction) {
@@ -215,8 +203,34 @@ export default function ExtratoPage() {
     setTransactions(prev => prev.filter(t => t.id !== tx.id && t.parent_id !== tx.id));
   }
 
+  // Create the previous month's card bill as an expense in the current future month
+  async function handleLaunchBill() {
+    if (!userId || !prevCardBill) return;
+    setLaunchingBill(true);
+    await insertTransaction({
+      user_id: userId,
+      type: 'expense',
+      amount: prevCardBill,
+      description: `Fatura Cartão ${shortMonth(prevMonth)}`,
+      category: 'Outros',
+      date: `${month}-01`,
+      card_id: null,
+      is_installment: false,
+    });
+    broadcastRefresh();
+    setPrevCardBill(0);
+    setLaunchingBill(false);
+  }
+
   const currentMonth = getCurrentMonth();
   const isFutureMonth = month > currentMonth;
+
+  // Hide the bill banner if the month already has a fatura transaction
+  const hasFaturaAlready = transactions.some(t =>
+    t.description.toLowerCase().includes('fatura') && t.type === 'expense'
+  );
+
+  const showBillBanner = isFutureMonth && prevCardBill > 0 && !hasFaturaAlready;
 
   const filtered = transactions
     .filter(t => filter === 'all' || t.type === filter)
@@ -239,7 +253,7 @@ export default function ExtratoPage() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation — z-index 2000, no backdropFilter to avoid compositing conflicts */}
       {pendingDelete && (
         <DeleteConfirm
           tx={pendingDelete}
@@ -249,13 +263,12 @@ export default function ExtratoPage() {
         />
       )}
 
-      {/* Sticky header */}
+      {/* Sticky header — NO backdropFilter (causes modal to appear behind on Safari/WebKit) */}
       <div className="page-sticky-head" style={{
         paddingBottom: 16,
         borderBottom: '1px solid var(--bd)',
-        background: 'var(--sf)',
+        background: 'var(--sf)',          // solid, not blurred — fixes z-index stacking
         position: 'sticky', top: 0, zIndex: 10,
-        backdropFilter: 'blur(12px)',
       }}>
         <span className="eyebrow" style={{ display: 'block', marginBottom: 10 }}>Extrato</span>
 
@@ -320,6 +333,40 @@ export default function ExtratoPage() {
         </div>
       </div>
 
+      {/* Fatura do mês anterior — banner só aparece se ainda não foi lançada */}
+      {showBillBanner && (
+        <div className="page-section" style={{ paddingTop: 20, paddingBottom: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: 'var(--a-pale)', border: '1px solid var(--a-bd)',
+            borderRadius: 14, padding: '14px 18px',
+          }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--a-dim)', border: '1px solid var(--a-bd)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CreditCard size={16} color="var(--a)" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--tx)', lineHeight: 1.3 }}>
+                Fatura Cartão — {shortMonth(prevMonth)}
+              </p>
+              <p style={{ fontSize: '.75rem', color: 'var(--tx-3)', marginTop: 2 }}>
+                <span className="money">{formatCurrency(prevCardBill)}</span> não lançado como despesa de {shortMonth(month)}
+              </p>
+            </div>
+            <button
+              onClick={handleLaunchBill}
+              disabled={launchingBill}
+              style={{
+                background: 'var(--a)', color: '#fff', border: 'none',
+                borderRadius: 8, padding: '8px 14px', fontSize: '.78rem',
+                fontWeight: 600, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+              }}
+            >
+              {launchingBill ? 'Lançando...' : 'Lançar'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Gastos fixos */}
       {userId && (
         <div className="page-section" style={{ paddingTop: 24, paddingBottom: 0 }}>
@@ -335,12 +382,7 @@ export default function ExtratoPage() {
             background: 'linear-gradient(135deg, var(--a-pale) 0%, var(--bg) 100%)',
             borderRadius: 16, padding: '40px 24px', textAlign: 'center', marginTop: 8,
           }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 14px',
-            }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--a-dim)', border: '1px solid var(--a-bd)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
               <Calendar size={22} color="var(--a)" />
             </div>
             <p style={{ fontSize: '.9rem', fontWeight: 600, color: 'var(--tx)', marginBottom: 6 }}>
@@ -372,19 +414,10 @@ export default function ExtratoPage() {
                 padding: '14px 0',
                 borderBottom: i < grouped[date].length - 1 ? '1px solid var(--bd)' : 'none',
               }}>
-                {/* Icon */}
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                  background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)',
-                  border: `1px solid ${tx.type === 'income' ? 'rgba(16,185,129,.2)' : 'var(--bd)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {tx.type === 'income'
-                    ? <TrendingUp size={14} color="var(--green)" />
-                    : <TrendingDown size={14} color="var(--tx-3)" />}
+                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: tx.type === 'income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)', border: `1px solid ${tx.type === 'income' ? 'rgba(16,185,129,.2)' : 'var(--bd)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {tx.type === 'income' ? <TrendingUp size={14} color="var(--green)" /> : <TrendingDown size={14} color="var(--tx-3)" />}
                 </div>
 
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: '.87rem', fontWeight: 500, color: 'var(--tx)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {tx.description}
@@ -397,44 +430,17 @@ export default function ExtratoPage() {
                   <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", marginTop: 2 }}>
                     {tx.category}
                   </p>
-
-                  {/* Action chips */}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <button
-                      onClick={() => openForEdit(tx)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: 'var(--a-dim)', border: '1px solid var(--a-bd)',
-                        borderRadius: 99, padding: '4px 10px', cursor: 'pointer',
-                        color: 'var(--a)', fontSize: '.7rem', fontWeight: 500,
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      <Pencil size={10} strokeWidth={2.5} />
-                      Editar
+                    <button onClick={() => openForEdit(tx)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--a-dim)', border: '1px solid var(--a-bd)', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', color: 'var(--a)', fontSize: '.7rem', fontWeight: 500, fontFamily: 'inherit' }}>
+                      <Pencil size={10} strokeWidth={2.5} /> Editar
                     </button>
-                    <button
-                      onClick={() => setPendingDelete(tx)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.18)',
-                        borderRadius: 99, padding: '4px 10px', cursor: 'pointer',
-                        color: 'var(--red)', fontSize: '.7rem', fontWeight: 500,
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      <Trash2 size={10} strokeWidth={2.5} />
-                      Excluir
+                    <button onClick={() => setPendingDelete(tx)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,.18)', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', color: 'var(--red)', fontSize: '.7rem', fontWeight: 500, fontFamily: 'inherit' }}>
+                      <Trash2 size={10} strokeWidth={2.5} /> Excluir
                     </button>
                   </div>
                 </div>
 
-                {/* Amount */}
-                <p style={{
-                  fontSize: '.92rem', fontWeight: 700, flexShrink: 0,
-                  color: tx.type === 'income' ? 'var(--green)' : 'var(--tx)',
-                  paddingTop: 2,
-                }}>
+                <p style={{ fontSize: '.92rem', fontWeight: 700, flexShrink: 0, color: tx.type === 'income' ? 'var(--green)' : 'var(--tx)', paddingTop: 2 }}>
                   <span className="money">{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                 </p>
               </div>
