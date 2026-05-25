@@ -442,8 +442,7 @@ export default function PlanejadoPage() {
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 0 40px' }}>
 
       {/* ── Sticky header + tabs ── */}
-      <div style={{
-        padding: '24px 32px 0',
+      <div className="page-sticky-head" style={{
         background: 'var(--sf)',
         position: 'sticky', top: 0, zIndex: 10,
         backdropFilter: 'blur(12px)',
@@ -452,22 +451,23 @@ export default function PlanejadoPage() {
         <span className="eyebrow" style={{ display: 'block', marginBottom: 14 }}>
           Central de Planejamento
         </span>
-        <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ display: 'flex', gap: 8, paddingBottom: 16 }}>
           {([
-            { key: 'mercado',  label: '🛒 Mercado'  },
-            { key: 'compras',  label: '🛍 Compras'  },
-            { key: 'desejos',  label: '💭 Desejos'  },
+            { key: 'mercado', label: 'Mercado' },
+            { key: 'compras', label: 'Compras' },
+            { key: 'desejos', label: 'Desejos' },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={{
-                padding: '10px 18px', background: 'none', border: 'none',
-                borderBottom: `2px solid ${tab === key ? 'var(--a)' : 'transparent'}`,
+                padding: '6px 16px', borderRadius: 99,
+                border: `1px solid ${tab === key ? 'var(--a)' : 'var(--bd-2)'}`,
+                background: tab === key ? 'var(--a)' : 'var(--sf)',
+                color: tab === key ? '#fff' : 'var(--tx-3)',
                 cursor: 'pointer', fontSize: '.82rem',
                 fontWeight: tab === key ? 600 : 400,
-                color: tab === key ? 'var(--a)' : 'var(--tx-3)',
-                transition: 'all .15s', marginBottom: -1,
+                transition: 'all .15s',
               }}
             >
               {label}
@@ -480,7 +480,7 @@ export default function PlanejadoPage() {
       {/* TAB: MERCADO                                                          */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'mercado' && (
-        <div style={{ padding: '20px 32px 0' }}>
+        <div className="page-section" style={{ paddingTop: 20, paddingBottom: 0 }}>
 
           {/* Mercado header row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -743,7 +743,7 @@ export default function PlanejadoPage() {
       {/* TAB: COMPRAS                                                          */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'compras' && (
-        <div style={{ padding: '20px 32px 0' }}>
+        <div className="page-section" style={{ paddingTop: 20, paddingBottom: 0 }}>
 
           {/* Summary pills */}
           <div className="summary-pills" style={{ marginBottom: 14 }}>
@@ -840,7 +840,7 @@ export default function PlanejadoPage() {
       {/* TAB: DESEJOS                                                          */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'desejos' && (
-        <div style={{ padding: '20px 32px 0' }}>
+        <div className="page-section" style={{ paddingTop: 20, paddingBottom: 0 }}>
 
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

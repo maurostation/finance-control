@@ -331,67 +331,75 @@ select.input {
   .week-stats-row > * { flex: none; }
 }
 
-/* Dashboard: week stats (2 tiles) + card column on same row on desktop */
-/* Mobile: 2-col grid for stats, cards span full width as carousel below */
+/* ── Main cards row (Esta semana + Semana passada + Cartão)
+   Mobile: single snap carousel — one card visible at a time
+   Desktop: equal 3-column grid                               */
 .week-and-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.week-stats-only {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-/* Cards column — full-width on mobile, 3rd col on desktop */
-.cards-col {
-  grid-column: 1 / -1;
-}
-
-/* Horizontal scroll carousel on mobile, vertical stack on desktop */
-.cards-carousel {
   display: flex;
-  gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  /* vertical padding gives box-shadows room to render without clipping */
-  padding: 4px 4px 12px;
-  margin: -4px -4px -12px;
+  gap: 16px;
+  padding: 4px 0 12px; /* shadow room */
+  margin-bottom: -8px;
 }
-.cards-carousel::-webkit-scrollbar { display: none; }
-.cards-carousel > * {
-  flex-shrink: 0;
-  width: min(76vw, 260px);
+.week-and-cards::-webkit-scrollbar { display: none; }
+.week-and-cards > * {
+  flex: 0 0 84%;
   scroll-snap-align: start;
+  min-width: 0;
+  flex-shrink: 0;
 }
+/* week-stats-only: same but 2 items */
+.week-stats-only {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 16px;
+  padding: 4px 0 12px;
+  margin-bottom: -8px;
+}
+.week-stats-only::-webkit-scrollbar { display: none; }
+.week-stats-only > * { flex: 0 0 84%; scroll-snap-align: start; min-width: 0; flex-shrink: 0; }
 
 @media (min-width: 768px) {
   .week-and-cards {
-    grid-template-columns: 1fr 1fr 1.6fr;
-    align-items: stretch;
-  }
-  .cards-col {
-    grid-column: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .cards-carousel {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
     overflow-x: visible;
     scroll-snap-type: none;
-    flex: 1;
+    align-items: stretch;
     padding: 0;
-    margin: 0;
+    margin-bottom: 0;
+  }
+  .week-and-cards > * { flex: none; }
+  .week-stats-only {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 16px;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding: 0;
+    margin-bottom: 0;
   }
-  .cards-carousel > * {
-    width: auto;
-    flex: 1;
-  }
+  .week-stats-only > * { flex: none; }
 }
+
+/* Responsive horizontal page padding: 16px mobile, 32px desktop */
+.px-page { padding-left: 16px; padding-right: 16px; }
+@media (min-width: 768px) { .px-page { padding-left: 32px; padding-right: 32px; } }
+
+/* Sticky page headers */
+.page-sticky-head { padding: 20px 16px 0; }
+@media (min-width: 768px) { .page-sticky-head { padding: 24px 32px 0; } }
+
+/* Inline content section padding */
+.page-section { padding-left: 16px; padding-right: 16px; }
+@media (min-width: 768px) { .page-section { padding-left: 32px; padding-right: 32px; } }
 
 /* ── Eye toggle: ocultar valores ── retângulo tipo skeleton, sem blur */
 .money {

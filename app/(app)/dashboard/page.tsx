@@ -106,7 +106,7 @@ export default function DashboardPage() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div style={{ padding: '32px 32px 40px', maxWidth: 1200, margin: '0 auto' }} className="dashboard-root">
+    <div className="dashboard-root px-page" style={{ paddingTop: 24, paddingBottom: 40, maxWidth: 1200, margin: '0 auto' }}>
 
       {/* ── Hero header ── */}
       <div style={{
@@ -200,13 +200,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Stats + Cards row: mesma linha no desktop ── */}
+        {/* ── Stats + Card: single carousel mobile / equal 3-col desktop ── */}
         <div className={cards.length > 0 ? 'week-and-cards' : 'week-stats-only'}>
-          {/* Carousel on mobile, two grid cells on desktop */}
-          <div className="week-stats-row">
           {[
-            { label: 'Esta semana',   value: thisWeekExp, sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
-            { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
+            { label: 'Esta semana',    value: thisWeekExp,  sub: weekDelta !== 0 ? `${weekDelta > 0 ? '↑' : '↓'}${Math.abs(weekDelta).toFixed(0)}% vs anterior` : '—', bad: weekDelta > 0 },
+            { label: 'Semana passada', value: lastWeekExp,  sub: 'período anterior', bad: false },
           ].map(item => (
             <div key={item.label} style={{
               background: 'var(--sf)', borderRadius: 14, padding: '16px 20px',
@@ -221,19 +219,10 @@ export default function DashboardPage() {
               </p>
             </div>
           ))}
-          </div>
-
-          {/* Cards column — carousel mobile, stack desktop */}
+          {/* Cartão — 3rd column on desktop, 3rd slide on mobile */}
           {cards.length > 0 && (
-            <div className="cards-col">
-              <div className="cards-carousel">
-                {cards.slice(0, 3).map(card => (
-                  <CardWidget key={card.id} card={card} openBillAmount={cardBill(card.id)} onClick={() => {}} />
-                ))}
-              </div>
-            </div>
+            <CardWidget card={cards[0]} openBillAmount={cardBill(cards[0].id)} onClick={() => {}} />
           )}
-
         </div>
 
         {/* Reserve */}

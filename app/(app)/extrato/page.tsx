@@ -81,8 +81,8 @@ export default function ExtratoPage() {
   return (
     <div style={{ maxWidth:900, margin:"0 auto", padding:"0 0 40px" }}>
       {/* Header */}
-      <div style={{
-        padding:'32px 32px 16px',
+      <div className="page-sticky-head" style={{
+        paddingBottom: 16,
         borderBottom:'1px solid var(--bd)',
         background:'var(--sf)',
         position:'sticky', top:0, zIndex:10,
@@ -154,7 +154,7 @@ export default function ExtratoPage() {
       </div>
 
       {/* Transaction list */}
-      <div style={{ padding:'0 32px' }}>
+      <div className="page-section" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {sortedDates.length === 0 && (
           <p style={{ textAlign:'center', color:'var(--tx-4)', padding:'40px 0', fontFamily:"'Geist Mono',monospace", fontSize:'.78rem' }}>
             Nenhum lançamento neste período.
