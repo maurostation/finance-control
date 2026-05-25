@@ -94,7 +94,7 @@ export default function ExtratoPage() {
           className="input"
           value={month}
           onChange={e => setMonth(e.target.value)}
-          style={{ marginBottom:12, fontWeight:500 }}
+          style={{ marginBottom:16, fontWeight:500 }}
         >
           {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
@@ -121,12 +121,12 @@ export default function ExtratoPage() {
         </div>
 
         {/* Filters */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginTop:10, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginTop:12, flexWrap:'wrap' }}>
           {/* Type filter */}
-          <div style={{ display:'flex', gap:5 }}>
+          <div style={{ display:'flex', gap:8 }}>
             {(['all','income','expense'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)} style={{
-                padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
+                padding:'4px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
                 border:'1px solid var(--bd-2)', cursor:'pointer',
                 background: filter===f ? 'var(--a)' : 'var(--sf)',
                 color: filter===f ? '#fff' : 'var(--tx-3)',
@@ -137,10 +137,10 @@ export default function ExtratoPage() {
             ))}
           </div>
           {/* Payment method filter — right-aligned */}
-          <div style={{ display:'flex', gap:5 }}>
+          <div style={{ display:'flex', gap:8 }}>
             {(['all','debit','card'] as const).map(f => (
               <button key={f} onClick={() => setPayFilter(f)} style={{
-                padding:'5px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
+                padding:'4px 12px', borderRadius:99, fontSize:'.75rem', fontWeight:500,
                 border:'1px solid var(--bd-2)', cursor:'pointer',
                 background: payFilter===f ? 'var(--tx-2)' : 'var(--sf)',
                 color: payFilter===f ? '#fff' : 'var(--tx-3)',
@@ -164,7 +164,7 @@ export default function ExtratoPage() {
           <div key={date}>
             {/* Day header */}
             <div style={{
-              padding:'14px 0 6px',
+              padding:'16px 0 8px',
               fontFamily:"'Geist Mono',monospace",
               fontSize:'.62rem', color:'var(--tx-4)',
               letterSpacing:'.1em', textTransform:'uppercase',
@@ -175,7 +175,7 @@ export default function ExtratoPage() {
             </div>
             {grouped[date].map((tx, i) => (
               <div key={tx.id} style={{
-                display:'flex', alignItems:'center', gap:10,
+                display:'flex', alignItems:'center', gap:12,
                 padding:'12px 0',
                 borderBottom: i < grouped[date].length - 1 ? '1px solid var(--bd)' : 'none',
               }}>
@@ -209,7 +209,7 @@ export default function ExtratoPage() {
                   }}>
                     <span className="money">{tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                   </p>
-                  <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:4 }}>
+                  <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:8 }}>
                     <button
                       onClick={() => openForEdit(tx)}
                       title="Editar lançamento"

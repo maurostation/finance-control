@@ -31,6 +31,7 @@
 
   --r:      14px;
   --nav-h:  60px;
+  --ticker-h: 44px; /* height of the sticky ticker bar (excl. safe area) */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -243,8 +244,8 @@ select.input {
 .main-content {
   flex: 1;
   min-width: 0;
-  /* nav (60) + fab clearance (56+12) + safe area + breathing room */
-  padding-bottom: calc(60px + env(safe-area-inset-bottom) + 48px);
+  /* nav + safe area + breathing room */
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px);
 }
 
 /* Desktop: sidebar visible, bottom nav hidden */
@@ -287,7 +288,7 @@ select.input {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  gap: 10px;
+  gap: 12px;
 }
 .summary-pills::-webkit-scrollbar { display: none; }
 .summary-pills > * {
@@ -299,7 +300,7 @@ select.input {
   .summary-pills {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
+    gap: 12px;
     overflow-x: visible;
     scroll-snap-type: none;
   }
@@ -314,7 +315,7 @@ select.input {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  gap: 12px;
+  gap: 16px;
 }
 .week-stats-row::-webkit-scrollbar { display: none; }
 .week-stats-row > * {
@@ -335,12 +336,12 @@ select.input {
 .week-and-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
 }
 .week-stats-only {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
 }
 
 /* Cards column — full-width on mobile, 3rd col on desktop */
@@ -351,24 +352,26 @@ select.input {
 /* Horizontal scroll carousel on mobile, vertical stack on desktop */
 .cards-carousel {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: 4px;
+  /* vertical padding gives box-shadows room to render without clipping */
+  padding: 4px 4px 12px;
+  margin: -4px -4px -12px;
 }
 .cards-carousel::-webkit-scrollbar { display: none; }
 .cards-carousel > * {
   flex-shrink: 0;
-  width: min(74vw, 260px);
+  width: min(76vw, 260px);
   scroll-snap-align: start;
 }
 
 @media (min-width: 768px) {
   .week-and-cards {
     grid-template-columns: 1fr 1fr 1.6fr;
-    align-items: stretch; /* all cells same height as tallest */
+    align-items: stretch;
   }
   .cards-col {
     grid-column: auto;
@@ -379,11 +382,14 @@ select.input {
     flex-direction: column;
     overflow-x: visible;
     scroll-snap-type: none;
-    flex: 1; /* fill the column height */
+    flex: 1;
+    padding: 0;
+    margin: 0;
+    gap: 16px;
   }
   .cards-carousel > * {
     width: auto;
-    flex: 1; /* card stretches to fill column */
+    flex: 1;
   }
 }
 
@@ -393,6 +399,7 @@ select.input {
   border-radius: 3px;
   transition: color .2s ease, background .2s ease;
 }
+/* .values-hidden sits on .app-root, parent of everything including mobile-nav */
 .values-hidden .money {
   color: transparent !important;
   background: var(--bg-2);
@@ -409,7 +416,7 @@ select.input {
   .hero-eye-btn {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     background: rgba(255,255,255,.7);
     backdrop-filter: blur(8px);
     border: 1px solid var(--bd-2);
@@ -435,33 +442,43 @@ select.input {
   }
 }
 
-/* Eye toggle inside the ticker bar — mobile only */
-.ticker-eye-btn {
+/* ticker-eye-btn: kept for legacy, hidden everywhere */
+.ticker-eye-btn { display: none !important; }
+
+/* Mobile floating eye button — right side, anchored just below the ticker */
+.mobile-eye-float {
   display: flex;
+  position: fixed;
+  top: calc(var(--ticker-h) + env(safe-area-inset-top) + 8px);
+  right: 16px;
+  z-index: 29;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--sf);
+  border: 1px solid var(--bd-2);
+  cursor: pointer;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 44px;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  border-left: 1px solid var(--a-bd);
-  cursor: pointer;
-  color: var(--a);
-  transition: background .15s;
+  color: var(--tx-3);
+  box-shadow: 0 2px 8px rgba(14,18,25,.1);
+  transition: all .15s;
 }
-.ticker-eye-btn:active { background: var(--a-dim); }
-.values-hidden .ticker-eye-btn { background: var(--a-dim); }
+.mobile-eye-float:active { transform: scale(.93); }
+.values-hidden .mobile-eye-float {
+  background: var(--a-dim);
+  border-color: var(--a-bd);
+  color: var(--a);
+}
 @media (min-width: 768px) {
-  .ticker-eye-btn { display: none; }
+  .mobile-eye-float { display: none; }
 }
 
-/* Mobile FAB — floats above center of bottom nav */
+/* Mobile FAB — floats above the right side of bottom nav */
 .mobile-fab {
   position: fixed;
-  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  right: 20px;
   z-index: 201;
   width: 56px;
   height: 56px;
@@ -476,7 +493,7 @@ select.input {
   box-shadow: 0 4px 24px rgba(217,119,6,.45);
   transition: box-shadow .2s, transform .12s;
 }
-.mobile-fab:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 2px 12px rgba(217,119,6,.3); }
+.mobile-fab:active { transform: translateY(2px); box-shadow: 0 2px 12px rgba(217,119,6,.3); }
 @media (min-width: 768px) {
   .mobile-fab { display: none; }
 }

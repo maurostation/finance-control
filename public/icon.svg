@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="bg-clip">
+      <rect width="1024" height="1024" rx="226" ry="226"/>
+    </clipPath>
+    <linearGradient id="wave-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#FEF3C7" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#bg-clip)">
+    <!-- White background -->
+    <rect width="1024" height="1024" fill="#FFFFFF"/>
+
+    <!-- Wave area fill -->
+    <path d="
+      M -20 750
+      C  70 738, 150 758, 280 748
+      C 410 738, 470 695, 562 660
+      C 654 625, 760 568, 896 494
+      C 954 462, 990 446, 1044 430
+      L 1044 1044 L -20 1044 Z
+    " fill="url(#wave-fill)"/>
+
+    <!-- Wave stroke -->
+    <path d="
+      M -20 750
+      C  70 738, 150 758, 280 748
+      C 410 738, 470 695, 562 660
+      C 654 625, 760 568, 896 494
+      C 954 462, 990 446, 1044 430
+    " stroke="#F59E0B" stroke-width="32" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- "R$" text -->
+    <text x="118" y="428"
+      font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Helvetica Neue', Arial, sans-serif"
+      font-weight="800"
+      font-size="272"
+      fill="#F59E0B"
+      letter-spacing="-8">R$</text>
+
+    <!-- Two gray list bars (top-right) -->
+    <rect x="596" y="264" width="248" height="40" rx="20" fill="#C4CAD6"/>
+    <rect x="596" y="336" width="200" height="40" rx="20" fill="#C4CAD6"/>
+  </g>
+</svg>

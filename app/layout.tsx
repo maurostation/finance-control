@@ -6,9 +6,13 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
-  title: "Finance Ctrl",
+  title: "Finance Hub",
   description: "Sua central financeira pessoal",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Finance Ctrl" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Finance Hub" },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export const viewport: Viewport = {

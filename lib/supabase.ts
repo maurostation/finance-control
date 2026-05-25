@@ -69,6 +69,14 @@ export async function markPurchaseBought(id: string) {
   return supabase.from('planned_purchases').update({ status: 'bought' }).eq('id', id);
 }
 
+export async function updatePlannedPurchase(id: string, data: Record<string, unknown>) {
+  return supabase.from('planned_purchases').update(data).eq('id', id).select().single();
+}
+
+export async function deletePlannedPurchase(id: string) {
+  return supabase.from('planned_purchases').delete().eq('id', id);
+}
+
 // Savings
 export async function getSavings(userId: string) {
   return supabase.from('savings_goals').select('*').eq('user_id', userId).single();

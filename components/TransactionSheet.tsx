@@ -146,7 +146,11 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
     : {
         background: 'var(--sf)',
         borderRadius: '20px 20px 0 0',
-        padding: '24px 20px 48px',
+        paddingTop: '20px',
+        paddingLeft: '20px',
+        paddingRight: '20px',
+        /* home indicator clearance on iPhone */
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)',
         width: '100%',
         animation: 'slideUp .22s cubic-bezier(.4,0,.2,1)',
         maxHeight: '92svh',

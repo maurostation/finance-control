@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [payFilter, setPayFilter] = useState<'all' | 'debit' | 'card'>('all');
   const [heroHidden, setHeroHidden] = useState(false);
+  const [futureMonth, setFutureMonth] = useState('');
 
   async function loadData(uid: string) {
     setLoading(true);
@@ -60,6 +61,14 @@ export default function DashboardPage() {
     return onValuesState(h => setHeroHidden(h));
   }, []);
 
+  // Auto-select first future month when data loads
+  useEffect(() => {
+    if (futureTx.length > 0 && !futureMonth) {
+      const months = [...new Set(futureTx.map(t => t.date.slice(0, 7)))].sort();
+      setFutureMonth(months[0]);
+    }
+  }, [futureTx, futureMonth]);
+
   const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const balance      = totalIncome - totalExpense;
@@ -97,7 +106,7 @@ export default function DashboardPage() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div style={{ padding: '32px 32px 40px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '32px 32px 40px', maxWidth: 1200, margin: '0 auto' }} className="dashboard-root">
 
       {/* ── Hero header ── */}
       <div style={{
@@ -143,8 +152,8 @@ export default function DashboardPage() {
               { label:'Entradas', value:totalIncome, color:'var(--green)', Icon:TrendingUp },
               { label:'Saídas',   value:totalExpense, color:'var(--red)',   Icon:TrendingDown },
             ].map(({ label, value, color, Icon }) => (
-              <div key={label} style={{ minWidth:120 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4 }}>
+              <div key={label}>
+                <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:4 }}>
                   <Icon size={13} color={color} />
                   <span style={{ fontSize:'.72rem', color:'var(--tx-3)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em' }}>{label}</span>
                 </div>
@@ -174,7 +183,7 @@ export default function DashboardPage() {
             background: 'var(--red-dim)',
             borderRadius: 12,
             padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 10,
+            display: 'flex', alignItems: 'center', gap: 12,
           }}>
             <AlertCircle size={15} color="var(--red)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -200,14 +209,14 @@ export default function DashboardPage() {
             { label: 'Semana passada', value: lastWeekExp, sub: 'período anterior', bad: false },
           ].map(item => (
             <div key={item.label} style={{
-              background: 'var(--sf)', borderRadius: 14, padding: '18px 20px',
+              background: 'var(--sf)', borderRadius: 14, padding: '16px 20px',
               boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
             }}>
               <p style={{ fontSize: '.72rem', color: 'var(--tx-3)', marginBottom: 8 }}>{item.label}</p>
               <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--tx)', letterSpacing: '-.03em' }}>
                 <span className="money">{formatCurrency(item.value)}</span>
               </p>
-              <p style={{ fontSize: '.7rem', fontFamily: "'Geist Mono',monospace", color: item.bad ? 'var(--red)' : 'var(--tx-4)', marginTop: 5 }}>
+              <p style={{ fontSize: '.7rem', fontFamily: "'Geist Mono',monospace", color: item.bad ? 'var(--red)' : 'var(--tx-4)', marginTop: 4 }}>
                 {item.sub}
               </p>
             </div>
@@ -246,55 +255,97 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Próximos meses ── */}
-      {futureTx.length > 0 && (() => {
-        const grouped = futureTx.reduce<Record<string, Transaction[]>>((acc, t) => {
-          const m = t.date.slice(0, 7);
-          (acc[m] = acc[m] || []).push(t);
-          return acc;
-        }, {});
-        const months = Object.keys(grouped).sort();
+      {/* ── Próximos meses — tab nav ── */}
+      {(() => {
+        const futureMonths = [...new Set(futureTx.map(t => t.date.slice(0, 7)))].sort();
+        const selectedTxs  = futureTx.filter(t => t.date.startsWith(futureMonth));
+        const monthLabel   = (m: string) => {
+          const l = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+            .format(new Date(m + '-01T00:00:00'));
+          return l.charAt(0).toUpperCase() + l.slice(1);
+        };
+        const out = selectedTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        const inc = selectedTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+
         return (
           <section style={{ marginTop: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <CalendarClock size={11} color="var(--a)" />
               <span className="eyebrow">Próximos meses</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {months.map(month => {
-                const txs = grouped[month];
-                const out = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-                const inc = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-                const net = inc - out;
-                const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
-                  .format(new Date(month + '-01T00:00:00'));
-                return (
-                  <div key={month} style={{
-                    background: 'var(--sf)', borderRadius: 14, padding: '14px 18px',
-                    boxShadow: '0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                    <div>
-                      <p style={{ fontSize: '.85rem', fontWeight: 600, color: 'var(--tx)', textTransform: 'capitalize' }}>{label}</p>
-                      <p style={{ fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)', marginTop: 2 }}>
-                        {txs.length} lançamento{txs.length !== 1 ? 's' : ''}
-                      </p>
+
+            {/* Month tabs — scrollable pills */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {futureMonths.map(m => (
+                <button key={m} onClick={() => setFutureMonth(m)} style={{
+                  padding: '6px 16px', borderRadius: 99, fontSize: '.78rem', fontWeight: 500,
+                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, border: '1px solid',
+                  background: futureMonth === m ? 'var(--a)' : 'var(--sf)',
+                  color: futureMonth === m ? '#fff' : 'var(--tx-3)',
+                  borderColor: futureMonth === m ? 'var(--a)' : 'var(--bd-2)',
+                  transition: 'all .15s',
+                }}>
+                  {monthLabel(m)}
+                </button>
+              ))}
+            </div>
+
+            {futureMonth && selectedTxs.length > 0 ? (
+              <>
+                {/* Totals bar */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  {inc > 0 && (
+                    <div style={{ flex: 1, background: 'rgba(16,185,129,.06)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(16,185,129,.12)' }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom: 2 }}>Entradas</p>
+                      <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--green)' }}><span className="money">+{formatCurrency(inc)}</span></p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      {inc > 0 && <span style={{ fontSize: '.75rem', color: 'var(--green)', fontWeight: 600 }}><span className="money">+{formatCurrency(inc)}</span></span>}
-                      {out > 0 && <span style={{ fontSize: '.75rem', color: 'var(--red)', fontWeight: 600 }}><span className="money">-{formatCurrency(out)}</span></span>}
-                      <span style={{
-                        fontSize: '.9rem', fontWeight: 700,
-                        color: net >= 0 ? 'var(--tx)' : 'var(--red)',
-                        borderLeft: '1px solid var(--bd)', paddingLeft: 14,
+                  )}
+                  {out > 0 && (
+                    <div style={{ flex: 1, background: 'var(--red-dim)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(239,68,68,.1)' }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace", textTransform:'uppercase', letterSpacing:'.06em', marginBottom: 2 }}>Saídas</p>
+                      <p style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--red)' }}><span className="money">-{formatCurrency(out)}</span></p>
+                    </div>
+                  )}
+                </div>
+                {/* Transaction list */}
+                <div style={{ background:'var(--sf)', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 4px rgba(14,18,25,.06), 0 4px 16px rgba(14,18,25,.04)' }}>
+                  {selectedTxs.map((tx, i) => (
+                    <div key={tx.id} style={{
+                      display:'flex', alignItems:'center', gap:12, padding:'12px 20px',
+                      borderBottom: i < selectedTxs.length-1 ? '1px solid var(--bd)' : 'none',
+                    }}>
+                      <div style={{
+                        width:32, height:32, borderRadius:8, flexShrink:0,
+                        background: tx.type==='income' ? 'rgba(16,185,129,.1)' : 'var(--bg-1)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
                       }}>
-                        <span className="money">{net >= 0 ? '+' : ''}{formatCurrency(net)}</span>
+                        {tx.type==='income' ? <TrendingUp size={13} color="var(--green)" /> : <TrendingDown size={13} color="var(--tx-3)" />}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:'.85rem', fontWeight:500, color:'var(--tx)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tx.description}</p>
+                        <p style={{ fontSize:'.68rem', color:'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>{tx.category} · {tx.date}</p>
+                      </div>
+                      <span style={{ fontSize:'.9rem', fontWeight:700, color: tx.type==='income' ? 'var(--green)' : 'var(--tx)', flexShrink:0 }}>
+                        <span className="money">{tx.type==='income' ? '+' : '-'}{formatCurrency(tx.amount)}</span>
                       </span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              /* Empty state for selected month (or no future months at all) */
+              <div style={{
+                background: 'var(--sf)', borderRadius: 14, padding: '32px 20px', textAlign: 'center',
+                boxShadow: '0 1px 4px rgba(14,18,25,.06)',
+              }}>
+                <CalendarClock size={24} color="var(--tx-4)" style={{ margin: '0 auto 8px', display: 'block', opacity: .5 }} />
+                <p style={{ fontSize: '.78rem', color: 'var(--tx-4)', fontFamily:"'Geist Mono',monospace" }}>
+                  {futureMonths.length === 0
+                    ? 'Nenhum lançamento futuro registrado.'
+                    : 'Nenhum lançamento neste mês.'}
+                </p>
+              </div>
+            )}
           </section>
         );
       })()}
@@ -309,7 +360,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           {/* Débito / Cartão chips */}
-          <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+          <div style={{ display:'flex', gap:8, marginBottom:12 }}>
             {(['all','debit','card'] as const).map(f => (
               <button key={f} onClick={() => setPayFilter(f)} style={{
                 padding:'4px 12px', borderRadius:99, fontSize:'.73rem', fontWeight:500,
@@ -334,7 +385,7 @@ export default function DashboardPage() {
             )}
             {recentTx.map((tx, i) => (
               <div key={tx.id} style={{
-                display:'flex', alignItems:'center', gap:12, padding:'13px 20px',
+                display:'flex', alignItems:'center', gap:12, padding:'12px 20px',
                 borderBottom: i < recentTx.length-1 ? '1px solid var(--bd)' : 'none',
                 transition:'background .15s',
               }}

@@ -1,6 +1,14 @@
 export type TransactionType = 'income' | 'expense';
-export type Priority = 'high' | 'low';
+export type Priority = 'high' | 'medium' | 'low';
 export type PurchaseStatus = 'pending' | 'bought';
+export type PlanType = 'compra' | 'desejo' | 'mercado';
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  checked: boolean;
+  price?: number | null;
+}
 export type CardStatus = 'open' | 'closed';
 
 export interface Transaction {
@@ -54,6 +62,9 @@ export interface PlannedPurchase {
   status: PurchaseStatus;
   notes?: string | null;
   created_at: string;
+  plan_type?: PlanType | null;
+  intended_date?: string | null;
+  link?: string | null;
 }
 
 export interface SavingsGoal {

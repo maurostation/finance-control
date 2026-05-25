@@ -262,22 +262,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <div style={{ minHeight: '100svh', background: 'var(--bg)' }} />;
   }
 
+  // Single root div carries values-hidden so ALL descendants (money, eye btn, etc.) respond
   return (
-    <>
+    <div className={`app-root${valuesHidden ? ' values-hidden' : ''}`}>
       {/* Desktop layout */}
-      <div style={{ display: 'flex', minHeight: '100svh' }} className={`desktop-layout${valuesHidden ? ' values-hidden' : ''}`}>
+      <div style={{ display: 'flex', minHeight: '100svh' }} className="desktop-layout">
         <div className="sidebar-wrapper">
           <Sidebar onAddClick={() => setShowSheet(true)} onSignOut={handleSignOut} onToggleValues={toggleValues} valuesHidden={valuesHidden} pathname={pathname} userId={userId} />
         </div>
         <main className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
-          {/* Ticker + mobile eye toggle on the right */}
-          <div style={{ position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'stretch', background: 'var(--a-pale)', borderBottom: '1px solid var(--a-bd)' }}>
-            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-              <FinanceTicker />
-            </div>
-            <button className="ticker-eye-btn" onClick={toggleValues}>
-              {valuesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+          {/* Sticky ticker — paddingTop accounts for iOS safe-area / Dynamic Island */}
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 30,
+            background: 'var(--a-pale)', borderBottom: '1px solid var(--a-bd)',
+            paddingTop: 'env(safe-area-inset-top)',
+          }}>
+            <FinanceTicker />
           </div>
           <div style={{ flex: 1 }}>
             {children}
@@ -285,8 +285,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile FAB + bottom nav */}
+      {/* Mobile: floating eye + FAB + bottom nav */}
       <div className="mobile-nav">
+        {/* Floating eye toggle — right side, below ticker */}
+        <button className="mobile-eye-float" onClick={toggleValues} title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}>
+          {valuesHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+        {/* FAB — right side, above nav */}
         <button className="mobile-fab" onClick={() => setShowSheet(true)}>
           <Plus size={22} />
         </button>
@@ -301,6 +306,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           editTx={editingTx}
         />
       )}
-    </>
+    </div>
   );
 }
