@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { RecurringTemplate, Card, Transaction, CATEGORIES } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, maskCurrency, parseCurrency } from '@/lib/utils';
 import {
   getRecurringTemplates,
   insertRecurringTemplate,
@@ -104,7 +104,7 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
     const { data } = await insertRecurringTemplate({
       user_id: userId,
       description: rDesc,
-      amount: parseFloat(rAmount.replace(',', '.')),
+      amount: parseCurrency(rAmount),
       type: rType,
       category: rCategory,
       card_id: rCardId || null,
@@ -180,10 +180,11 @@ export default function RecurringSection({ userId, currentMonthTx, cards, displa
                 <label style={{ fontSize: '.72rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Valor (R$)</label>
                 <input
                   className="input"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   placeholder="0,00"
                   value={rAmount}
-                  onChange={e => setRAmount(e.target.value)}
+                  onChange={e => setRAmount(maskCurrency(e.target.value))}
                 />
               </div>
               <div>

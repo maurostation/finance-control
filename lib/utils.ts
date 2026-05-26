@@ -36,6 +36,20 @@ export function getNextMonth(): string {
   return d.toISOString().slice(0, 7);
 }
 
+/** Mask a user-typed string as BRL currency (centavos approach: "1234" → "12,34") */
+export function maskCurrency(input: string): string {
+  const digits = input.replace(/\D/g, '');
+  if (!digits) return '';
+  const n = parseInt(digits, 10) / 100;
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Parse a masked BRL string ("1.234,56") back to a number */
+export function parseCurrency(masked: string): number {
+  if (!masked) return 0;
+  return parseFloat(masked.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 export function getCurrentMonthLabel(): string {
   return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
     .format(new Date())

@@ -163,10 +163,14 @@ export default function DashboardPage() {
     : 0;
   const debitExpense = totalExpense - cardExpense;
 
-  // What to display in hero depends on which month we're viewing
-  const displayIncome  = isFutureMonth ? projectedIncome  : totalIncome;
-  // Future: recurring fixed costs + previous month's card bill; current: debit only (card deferred)
-  const displayExpense = isFutureMonth ? projectedExpense + prevMonthCardBill : debitExpense;
+  // Future month with actual transactions → show real data; else project from templates
+  const hasActualTx = isFutureMonth && transactions.length > 0;
+
+  const displayIncome  = (isFutureMonth && !hasActualTx) ? projectedIncome  : totalIncome;
+  const displayExpense = hasActualTx          ? totalExpense
+    : isFutureMonth                           ? projectedExpense + prevMonthCardBill
+    : isCurrentMonth                          ? debitExpense
+    : totalExpense;
   const balance        = displayIncome - displayExpense;
   const budgetPct      = displayIncome > 0 ? Math.min((displayExpense / displayIncome) * 100, 100) : 0;
 
@@ -178,7 +182,10 @@ export default function DashboardPage() {
   const lastWeekExp = transactions.filter(t => { const d = new Date(t.date + 'T00:00:00'); return t.type === 'expense' && d >= lastWeekStart && d < thisWeekStart; }).reduce((s, t) => s + t.amount, 0);
   const weekDelta   = lastWeekExp > 0 ? ((thisWeekExp - lastWeekExp) / lastWeekExp) * 100 : 0;
 
+  // Card limit consumed: only meaningful for current month.
+  // Future months show 0 — charges belong to the current billing period.
   function cardBill(id: string) {
+    if (isFutureMonth) return 0;
     return transactions.filter(t => t.card_id === id && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   }
 
@@ -253,7 +260,9 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: '.82rem', color: 'var(--tx-3)', marginBottom: 4 }}>
-                {isFutureMonth ? 'Projeção — gastos fixos' : isCurrentMonth ? 'Disponível este mês' : 'Saldo realizado'}
+                {isFutureMonth
+                  ? hasActualTx ? 'Saldo realizado' : 'Projeção — gastos fixos'
+                  : isCurrentMonth ? 'Disponível este mês' : 'Saldo realizado'}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <p className="hero-balance" style={{ color: balance >= 0 ? 'var(--tx)' : 'var(--red)' }}>
@@ -277,8 +286,8 @@ export default function DashboardPage() {
                   <span className="money" style={{ color: 'var(--red)' }}>-{formatCurrency(cardExpense)}</span>
                 </p>
               )}
-              {/* Card bill from previous month — shown in future month projection */}
-              {isFutureMonth && prevMonthCardBill > 0 && (
+              {/* Card bill from previous month — shown only in pure projection (no actual tx) */}
+              {isFutureMonth && !hasActualTx && prevMonthCardBill > 0 && (
                 <p style={{ fontSize: '.72rem', color: 'var(--tx-4)', fontFamily: "'Geist Mono',monospace", marginTop: 4 }}>
                   Fatura cartão anterior incluída:{' '}
                   <span className="money" style={{ color: 'var(--red)' }}>-{formatCurrency(prevMonthCardBill)}</span>
@@ -289,8 +298,8 @@ export default function DashboardPage() {
             {/* Income / Expense stats */}
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               {[
-                { label: isFutureMonth ? 'Entradas fixas' : 'Entradas', value: displayIncome,  color: 'var(--green)', Icon: TrendingUp  },
-                { label: isFutureMonth ? 'Saídas fixas'   : 'Saídas',   value: displayExpense, color: 'var(--red)',   Icon: TrendingDown },
+                { label: (isFutureMonth && !hasActualTx) ? 'Entradas fixas' : 'Entradas', value: displayIncome,  color: 'var(--green)', Icon: TrendingUp  },
+                { label: (isFutureMonth && !hasActualTx) ? 'Saídas fixas'   : 'Saídas',   value: displayExpense, color: 'var(--red)',   Icon: TrendingDown },
               ].map(({ label, value, color, Icon }) => (
                 <div key={label}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
@@ -311,7 +320,7 @@ export default function DashboardPage() {
               <div className={`progress-fill ${getProgressClass(budgetPct)}`} style={{ width: `${budgetPct}%` }} />
             </div>
             <p style={{ marginTop: 5, fontSize: '.68rem', fontFamily: "'Geist Mono',monospace", color: 'var(--tx-4)' }}>
-              {isFutureMonth
+              {(isFutureMonth && !hasActualTx)
                 ? `${budgetPct.toFixed(0)}% comprometido — fixos${prevMonthCardBill > 0 ? ' + fatura cartão' : ''}`
                 : `${budgetPct.toFixed(0)}% da renda utilizada${isCurrentMonth && cardExpense > 0 ? ' (excl. fatura)' : ''}`}
             </p>

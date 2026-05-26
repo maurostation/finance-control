@@ -6,7 +6,7 @@ import {
   updatePlannedPurchase, deletePlannedPurchase,
 } from '@/lib/supabase';
 import { PlannedPurchase, GroceryItem, CATEGORIES } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, maskCurrency, parseCurrency } from '@/lib/utils';
 import {
   Plus, ShoppingBag, CheckCircle, X, Tag, AlertCircle,
   ChevronDown, ChevronRight, Trash2, ExternalLink,
@@ -79,6 +79,7 @@ export default function PlanejadoPage() {
   const [fCategory, setFCategory] = useState('');
   const [fDate, setFDate] = useState('');
   const [fLink, setFLink] = useState('');
+  const [fEssential, setFEssential] = useState(true);
   const [saving, setSaving] = useState(false);
   const [prioFilter, setPrioFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [showBought, setShowBought] = useState(false);
@@ -122,7 +123,7 @@ export default function PlanejadoPage() {
     setShowForm(false);
     setEditingId(null);
     setFName(''); setFValue(''); setFPriority('medium');
-    setFCategory(''); setFDate(''); setFLink('');
+    setFCategory(''); setFDate(''); setFLink(''); setFEssential(true);
   }, [tab]);
 
   // ── Mercado actions ──────────────────────────────────────────────────────────
@@ -222,11 +223,14 @@ export default function PlanejadoPage() {
 
   function openEdit(p: PlannedPurchase) {
     setFName(p.name);
-    setFValue(p.estimated_value ? String(p.estimated_value) : '');
+    setFValue(p.estimated_value
+      ? p.estimated_value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '');
     setFPriority((p.priority as 'high' | 'medium' | 'low') || 'medium');
     setFCategory(p.category || '');
     setFDate(p.intended_date || '');
     setFLink(p.link || '');
+    try { setFEssential(JSON.parse(p.notes || '{}').essential !== false); } catch { setFEssential(true); }
     setEditingId(p.id);
     setShowForm(true);
   }
@@ -234,14 +238,16 @@ export default function PlanejadoPage() {
   async function savePurchase() {
     if (!userId || !fName.trim()) return;
     setSaving(true);
+    const planType = tab === 'compras' ? 'compra' : tab === 'desejos' ? 'desejo' : tab;
     const payload: Record<string, unknown> = {
       name: fName.trim(),
-      estimated_value: parseFloat(fValue.replace(',', '.')) || 0,
+      estimated_value: parseCurrency(fValue),
       priority: fPriority,
       category: fCategory || 'Outros',
       intended_date: fDate || null,
       link: fLink || null,
-      plan_type: tab,
+      plan_type: planType,
+      notes: (tab === 'compras' || tab === 'desejos') ? JSON.stringify({ essential: fEssential }) : undefined,
     };
     if (editingId) {
       const { data } = await updatePlannedPurchase(editingId, payload);
@@ -252,7 +258,7 @@ export default function PlanejadoPage() {
     }
     setShowForm(false); setEditingId(null);
     setFName(''); setFValue(''); setFPriority('medium');
-    setFCategory(''); setFDate(''); setFLink('');
+    setFCategory(''); setFDate(''); setFLink(''); setFEssential(true);
     setSaving(false);
   }
 
@@ -270,12 +276,15 @@ export default function PlanejadoPage() {
   const mercadoActive = purchases.filter(p => (p.plan_type ?? 'compra') === 'mercado' && p.status === 'pending');
   const mercadoDone   = purchases.filter(p => (p.plan_type ?? 'compra') === 'mercado' && p.status === 'bought');
 
-  const comprasPending = purchases.filter(p => (p.plan_type ?? 'compra') === 'compra' && p.status === 'pending');
-  const comprasBought  = purchases.filter(p => (p.plan_type ?? 'compra') === 'compra' && p.status === 'bought');
+  const isCompra  = (p: PlannedPurchase) => p.plan_type === 'compra' || (p.plan_type as string) === 'compras' || !p.plan_type;
+  const isDesejo  = (p: PlannedPurchase) => p.plan_type === 'desejo' || (p.plan_type as string) === 'desejos';
+
+  const comprasPending = purchases.filter(p => isCompra(p) && p.status === 'pending');
+  const comprasBought  = purchases.filter(p => isCompra(p) && p.status === 'bought');
   const filteredCompras = comprasPending.filter(p => prioFilter === 'all' || p.priority === prioFilter);
 
-  const desejosPending = purchases.filter(p => p.plan_type === 'desejo' && p.status === 'pending');
-  const desejosBought  = purchases.filter(p => p.plan_type === 'desejo' && p.status === 'bought');
+  const desejosPending = purchases.filter(p => isDesejo(p) && p.status === 'pending');
+  const desejosBought  = purchases.filter(p => isDesejo(p) && p.status === 'bought');
 
   if (loading) return <PlanejadoSkeleton />;
 
@@ -301,9 +310,25 @@ export default function PlanejadoPage() {
           value={fName} onChange={e => setFName(e.target.value)}
         />
         <input
-          className="input" type="number" placeholder="Valor estimado (R$)"
-          value={fValue} onChange={e => setFValue(e.target.value)}
+          className="input" type="text" inputMode="decimal" placeholder="Valor estimado (R$)"
+          value={fValue} onChange={e => setFValue(maskCurrency(e.target.value))}
         />
+        {/* Essencial / Não essencial — Compras only */}
+        {tab === 'compras' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {([true, false] as const).map(v => (
+              <button key={String(v)} onClick={() => setFEssential(v)} style={{
+                padding: '9px', borderRadius: 8, fontSize: '.82rem', fontWeight: 500,
+                border: '1px solid', cursor: 'pointer',
+                background: fEssential === v ? 'var(--a-dim)' : 'var(--sf)',
+                color:      fEssential === v ? 'var(--a)'     : 'var(--tx-3)',
+                borderColor: fEssential === v ? 'var(--a-bd)' : 'var(--bd-2)',
+              }}>
+                {v ? 'Essencial' : 'Não essencial'}
+              </button>
+            ))}
+          </div>
+        )}
         {/* Priority — Compras only */}
         {tab === 'compras' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>

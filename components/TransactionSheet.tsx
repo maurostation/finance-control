@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Sparkles, FileText, Pencil } from 'lucide-react';
 import { CATEGORIES, Transaction } from '@/lib/types';
-import { parseNaturalAmount } from '@/lib/utils';
+import { parseNaturalAmount, maskCurrency, parseCurrency } from '@/lib/utils';
 
 interface Props {
   cards: Array<{ id: string; name: string }>;
@@ -55,7 +55,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
   useEffect(() => {
     if (editTx) {
       setType(editTx.type);
-      setAmount(editTx.amount.toString());
+      setAmount(editTx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setDescription(editTx.description);
       setCategory(editTx.category);
       setDate(editTx.date);
@@ -100,7 +100,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
 
     const data: Record<string, unknown> = {
       type,
-      amount: parseFloat(amount.replace(',', '.')),
+      amount: parseCurrency(amount),
       description,
       category,
       date,
@@ -264,7 +264,7 @@ export default function TransactionSheet({ cards, onClose, onSave, editTx }: Pro
             </div>
             <div>
               <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Valor (R$)</label>
-              <input className="input" type="number" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} autoFocus={isDesktop} />
+              <input className="input" type="text" inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(maskCurrency(e.target.value))} autoFocus={isDesktop} />
             </div>
             <div>
               <label style={{ fontSize: '.78rem', color: 'var(--tx-3)', display: 'block', marginBottom: 4 }}>Descrição</label>
